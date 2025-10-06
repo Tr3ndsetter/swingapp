@@ -8,109 +8,175 @@
   :root { --gap: 12px; --pad: 14px; --radius: 14px; }
   *{ box-sizing:border-box; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; }
   body{ margin:0; background:#0b0b0c; color:#eaeaea; }
-  header{ padding:var(--pad); border-bottom:1px solid #222; position:sticky; top:0; background:#0b0b0c; z-index:5; }
+  header{ padding:var(--pad); border-bottom:1px solid #222; position:sticky; top:0; background:#0b0b0c; z-index:10; }
   h1{ font-size:18px; margin:0; }
-  .wrap{ padding:var(--pad); display:grid; gap:var(--gap); max-width:900px; margin:0 auto; }
+  .wrap{ padding:var(--pad); display:grid; gap:var(--gap); max-width:1100px; margin:0 auto; }
+  .grid{ display:grid; gap:var(--gap); grid-template-columns: 1fr; }
+  @media (min-width: 1024px){ .grid{ grid-template-columns: 1.1fr .9fr; } }
   .card{ background:#121214; border:1px solid #1f1f22; border-radius:var(--radius); padding:var(--pad); }
   .row{ display:flex; flex-wrap:wrap; gap:var(--gap); align-items:center; }
-  select,button,input[type="file"]{ background:#1a1a1f; color:#eaeaea; border:1px solid #2a2a31; border-radius:10px; padding:10px 12px; }
-  button{ cursor:pointer; } button.primary{ background:#2a62ff; border-color:#2a62ff; } button.danger{ background:#ff2a4a; border-color:#ff2a4a; } button:disabled{ opacity:.5; cursor:not-allowed; }
+  .grow{ flex:1 1 auto; }
+  select,button,input[type="file"],input[type="text"],input[type="number"],textarea{
+    background:#1a1a1f; color:#eaeaea; border:1px solid #2a2a31; border-radius:10px; padding:10px 12px;
+  }
+  button{ cursor:pointer; } 
+  button.primary{ background:#2a62ff; border-color:#2a62ff; } 
+  button.danger{ background:#ff2a4a; border-color:#ff2a4a; } 
+  button:disabled{ opacity:.5; cursor:not-allowed; }
   video{ width:100%; border-radius:var(--radius); background:black; max-height:70vh; object-fit:contain; }
+  canvas.overlay{ position:absolute; inset:0; width:100%; height:100%; touch-action:none; }
+  .playerWrap{ position:relative; }
   .pill{ padding:4px 8px; border:1px solid #2a2a31; border-radius:999px; font-size:12px; }
   .warn{ background:#3b2a00; border:1px solid #644400; color:#ffd58a; padding:10px 12px; border-radius:10px; }
   .hint{ font-size:12px; opacity:.85; }
+  .libTable{ width:100%; border-collapse: collapse; }
+  .libTable th,.libTable td{ border-bottom:1px solid #25252a; padding:8px; text-align:left; font-size:14px; }
+  .tool{ padding:8px 10px; border:1px solid #2a2a31; border-radius:8px; }
+  .tools .active{ outline:2px solid #2a62ff; }
+  .tag{ font-size:11px; opacity:.85; border:1px solid #404048; padding:2px 6px; border-radius:999px; }
 </style>
 </head>
 <body>
-<header><h1>Softball Swing Capture (Web)</h1></header>
+<header>
+  <div class="row" style="justify-content:space-between;">
+    <h1>Softball Swing Capture (Web)</h1>
+    <div class="row">
+      <label for="playerSelect">Player:</label>
+      <select id="playerSelect"></select>
+      <button id="addPlayer" class="primary">+ New Player</button>
+    </div>
+  </div>
+</header>
 
 <main class="wrap">
   <div id="httpsWarn" class="warn" style="display:none">
-    This page isn’t on <b>HTTPS</b>. iOS blocks camera on non-secure pages. Host on https (GitHub Pages) or use localhost.
+    This page isn’t on <b>HTTPS</b>. iOS blocks camera on non-secure pages. Use your GitHub Pages URL.
   </div>
 
-  <section class="card">
-    <div class="row" style="justify-content:space-between; gap:16px; align-items:flex-end;">
-      <div style="min-width:200px;">
-        <label>Camera</label><br/>
-        <select id="cameraSelect" disabled><option>Allow camera to list devices…</option></select>
+  <div class="grid">
+    <!-- LEFT: Capture & Playback + Annotations -->
+    <section class="card">
+      <h2 style="margin-top:0;font-size:16px;">Capture</h2>
+      <div class="row" style="justify-content:space-between; gap:16px; align-items:flex-end;">
+        <div style="min-width:160px;">
+          <label>Resolution</label><br/>
+          <select id="resolution">
+            <option value="1920x1080">1080p (ideal)</option>
+            <option value="1280x720">720p</option>
+            <option value="640x480">480p</option>
+          </select>
+        </div>
+        <div style="min-width:160px;">
+          <label>Target FPS</label><br/>
+          <select id="fps">
+            <option value="240">240 (try)</option>
+            <option value="120">120 (try)</option>
+            <option value="60" selected>60 (reliable)</option>
+            <option value="30">30</option>
+          </select>
+        </div>
+        <div class="row">
+          <button id="startPreview" class="primary">Start Camera</button>
+          <button id="stopPreview">Stop Camera</button>
+        </div>
       </div>
-      <div style="min-width:160px;">
-        <label>Resolution</label><br/>
-        <select id="resolution">
-          <option value="1920x1080">1080p (ideal)</option>
-          <option value="1280x720">720p</option>
-          <option value="640x480">480p</option>
-        </select>
+      <div class="hint" style="margin-top:8px">
+        We hard-request the <b>back camera</b> (environment). Mobile Safari often caps at ~60 fps; browser returns best available.
       </div>
-      <div style="min-width:160px;">
-        <label>Target FPS</label><br/>
-        <select id="fps">
-          <option value="240">240 (try)</option>
-          <option value="120">120 (try)</option>
-          <option value="60" selected>60 (reliable)</option>
-          <option value="30">30</option>
-        </select>
-      </div>
-      <div class="row">
-        <button id="startPreview" class="primary">Start Camera</button>
-        <button id="stopPreview">Stop Camera</button>
-      </div>
-    </div>
 
-    <div class="hint" style="margin-top:8px">
-      Mobile Safari often caps at ~60 fps for web capture. We request higher; the browser gives the best it can.
-    </div>
+      <video id="preview" playsinline muted></video>
 
-    <video id="preview" playsinline muted></video>
-
-    <div class="row" style="justify-content:space-between; margin-top:12px;">
-      <div class="row" style="gap:8px;">
-        <button id="startRec" class="primary" disabled>Record</button>
-        <button id="stopRec" class="danger" disabled>Stop</button>
+      <div class="row" style="justify-content:space-between; margin-top:12px;">
+        <div class="row" style="gap:8px;">
+          <button id="startRec" class="primary" disabled>Record</button>
+          <button id="stopRec" class="danger" disabled>Stop</button>
+        </div>
+        <div class="row" style="gap:8px;">
+          <span id="timer" class="pill">00:00</span>
+          <span id="status" class="pill">Idle</span>
+        </div>
       </div>
-      <div class="row" style="gap:8px;">
-        <span id="timer" class="pill">00:00</span>
-        <span id="status" class="pill">Idle</span>
-      </div>
-    </div>
 
-    <div id="errBox" class="warn" style="display:none; margin-top:10px;"></div>
+      <div id="errBox" class="warn" style="display:none; margin-top:10px;"></div>
 
-    <div style="margin-top:12px;">
-      <div class="hint">If camera is blocked, use this fallback to record with the native camera app and load the clip:</div>
-      <input id="filePicker" type="file" accept="video/*" capture="environment" />
-    </div>
-  </section>
+      <div style="margin-top:12px;">
+        <div class="hint">If camera is blocked, use this fallback to record with the native camera and load the clip:</div>
+        <input id="filePicker" type="file" accept="video/*" capture="environment" />
+      </div>
 
-  <section class="card">
-    <h2 style="margin-top:0;font-size:16px;">Playback</h2>
-    <video id="playback" controls playsinline></video>
+      <hr style="border-color:#222; margin:16px 0;"/>
 
-    <div class="row" style="margin-top:12px;">
-      <div class="row">
-        <button data-rate="1">1×</button>
-        <button data-rate="0.5">½×</button>
-        <button data-rate="0.2">⅕×</button>
-        <button data-rate="0.1">1/10×</button>
+      <h2 style="margin-top:0;font-size:16px;">Playback & Annotations</h2>
+
+      <div class="playerWrap">
+        <video id="playback" controls playsinline></video>
+        <canvas id="overlay" class="overlay"></canvas>
       </div>
-      <div class="row">
-        <button id="stepBack">⟨ Frame</button>
-        <button id="stepFwd">Frame ⟩</button>
+
+      <div class="row" style="margin-top:12px;">
+        <div class="row">
+          <button data-rate="1">1×</button>
+          <button data-rate="0.5">½×</button>
+          <button data-rate="0.2">⅕×</button>
+          <button data-rate="0.1">1/10×</button>
+        </div>
+        <div class="row">
+          <button id="stepBack">⟨ Frame</button>
+          <button id="stepFwd">Frame ⟩</button>
+        </div>
+        <div class="grow"></div>
+        <div class="row">
+          <button id="download" disabled>Download MP4</button>
+          <button id="resetClip" disabled>Clear</button>
+        </div>
       </div>
-      <div style="flex:1"></div>
-      <div class="row">
-        <button id="download" disabled>Download MP4</button>
-        <button id="resetClip" disabled>Clear</button>
+
+      <!-- Annotation tools -->
+      <div class="card" style="margin-top:12px;">
+        <div class="row tools" id="toolBar">
+          <span class="tag">Tools</span>
+          <button class="tool" data-tool="line">Line</button>
+          <button class="tool" data-tool="circle">Circle</button>
+          <button class="tool" data-tool="text">Text</button>
+          <div class="grow"></div>
+          <label>Color <input type="color" id="annoColor" value="#ffda2a" style="width:48px;height:36px;padding:0;border-radius:8px;border:1px solid #2a2a31;background:#1a1a1f;"></label>
+          <label>Thickness <input type="number" id="annoThick" min="1" max="12" value="3" style="width:64px;"></label>
+          <button id="undoAnno">Undo</button>
+          <button id="saveAnno" class="primary">Save Annotations</button>
+        </div>
+        <div class="hint">Annotations attach to the <b>current clip</b> and the <b>selected player</b>. They display for the entire clip (timing ranges can be added later).</div>
       </div>
-    </div>
-  </section>
+    </section>
+
+    <!-- RIGHT: Library per player -->
+    <section class="card">
+      <div class="row" style="justify-content:space-between;align-items:center;">
+        <h2 style="margin:0;font-size:16px;">Library <span id="libPlayerTag" class="tag"></span></h2>
+        <button id="refreshLib">Refresh</button>
+      </div>
+      <table class="libTable" id="libTable">
+        <thead><tr><th>Clip</th><th>When</th><th>Actions</th></tr></thead>
+        <tbody id="libBody"><tr><td colspan="3" style="opacity:.7;">No clips yet.</td></tr></tbody>
+      </table>
+      <div class="hint" style="margin-top:8px;">Data is stored on this device in your browser (IndexedDB). Deleting site data clears it.</div>
+    </section>
+  </div>
 </main>
 
 <script>
+/* ==========================
+   Utilities & State
+========================== */
 const els = {
   httpsWarn: document.getElementById('httpsWarn'),
-  cameraSelect: document.getElementById('cameraSelect'),
+  // player/profiles
+  playerSelect: document.getElementById('playerSelect'),
+  addPlayer: document.getElementById('addPlayer'),
+  libPlayerTag: document.getElementById('libPlayerTag'),
+  libBody: document.getElementById('libBody'),
+  refreshLib: document.getElementById('refreshLib'),
+
+  // capture
   resolution: document.getElementById('resolution'),
   fps: document.getElementById('fps'),
   startPreview: document.getElementById('startPreview'),
@@ -120,18 +186,153 @@ const els = {
   stopRec: document.getElementById('stopRec'),
   status: document.getElementById('status'),
   timer: document.getElementById('timer'),
-  playback: document.getElementById('playback'),
-  speedBtns: [...document.querySelectorAll('[data-rate]')],
-  stepBack: document.getElementById('stepBack'),
-  stepFwd: document.getElementById('stepFwd'),
-  download: document.getElementById('download'),
-  resetClip: document.getElementById('resetClip'),
   errBox: document.getElementById('errBox'),
   filePicker: document.getElementById('filePicker'),
+
+  // playback
+  playback: document.getElementById('playback'),
+  download: document.getElementById('download'),
+  resetClip: document.getElementById('resetClip'),
+  stepBack: document.getElementById('stepBack'),
+  stepFwd: document.getElementById('stepFwd'),
+  rateBtns: [...document.querySelectorAll('[data-rate]')],
+
+  // annotations
+  toolBar: document.getElementById('toolBar'),
+  overlay: document.getElementById('overlay'),
+  annoColor: document.getElementById('annoColor'),
+  annoThick: document.getElementById('annoThick'),
+  undoAnno: document.getElementById('undoAnno'),
+  saveAnno: document.getElementById('saveAnno'),
 };
 
 let stream=null, mediaRecorder=null, chunks=[], currentBlob=null, timerInt=null, recStart=0;
+let currentClip = null; // {id, profile, createdAt, type}
+let currentTool = 'line';
+let annotations = []; // {type, color, thick, data: {x1,y1,x2,y2} or {cx,cy,r} or {x,y,text}}
+const ctx = els.overlay.getContext('2d');
 
+/* ==========================
+   Profiles (localStorage) 
+========================== */
+function loadProfiles(){
+  const raw = localStorage.getItem('swing_profiles');
+  let arr = raw ? JSON.parse(raw) : ['Player 1'];
+  if(arr.length===0) arr=['Player 1'];
+  return arr;
+}
+function saveProfiles(arr){
+  localStorage.setItem('swing_profiles', JSON.stringify(arr));
+}
+function ensurePlayerSelect(){
+  const list = loadProfiles();
+  els.playerSelect.innerHTML='';
+  list.forEach(name=>{
+    const opt=document.createElement('option'); opt.value=name; opt.textContent=name;
+    els.playerSelect.appendChild(opt);
+  });
+  els.libPlayerTag.textContent = els.playerSelect.value;
+}
+els.addPlayer.addEventListener('click', ()=>{
+  const name = prompt('New player name');
+  if(!name) return;
+  const list = loadProfiles();
+  if(!list.includes(name)){ list.push(name); saveProfiles(list); ensurePlayerSelect(); els.playerSelect.value = name; els.libPlayerTag.textContent=name; refreshLibrary(); }
+});
+els.playerSelect.addEventListener('change', ()=>{ els.libPlayerTag.textContent=els.playerSelect.value; refreshLibrary(); });
+
+/* ==========================
+   IndexedDB (clips + annotations)
+========================== */
+const DB_NAME = 'swingdb';
+const DB_VER = 1;
+let db = null;
+
+function openDB(){
+  return new Promise((res,rej)=>{
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = (e)=>{
+      const d = req.result;
+      if(!d.objectStoreNames.contains('clips')){
+        const store = d.createObjectStore('clips', { keyPath: 'id', autoIncrement: true });
+        store.createIndex('by_profile','profile',{unique:false});
+      }
+      if(!d.objectStoreNames.contains('annos')){
+        const store = d.createObjectStore('annos', { keyPath: 'clipId' });
+      }
+    };
+    req.onsuccess = ()=>{ db=req.result; res(db); };
+    req.onerror = ()=>rej(req.error);
+  });
+}
+
+function saveClip(profile, blob, type){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(['clips'],'readwrite');
+    const store = tx.objectStore('clips');
+    const rec = { profile, createdAt: Date.now(), type, /* blob stored in separate put to keep reference */ };
+    const addReq = store.add(rec);
+    addReq.onsuccess = ()=>{
+      const id = addReq.result;
+      // put blob under same key in same store using put with the same object (structured clone stores blob)
+      const getReq = store.get(id);
+      getReq.onsuccess = ()=>{
+        const obj = getReq.result; obj.blob = blob;
+        const putReq = store.put(obj);
+        putReq.onsuccess = ()=>res(id);
+        putReq.onerror = ()=>rej(putReq.error);
+      };
+    };
+    addReq.onerror = ()=>rej(addReq.error);
+  });
+}
+function listClips(profile){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(['clips'],'readonly');
+    const idx = tx.objectStore('clips').index('by_profile');
+    const req = idx.getAll(profile);
+    req.onsuccess = ()=>res(req.result.sort((a,b)=>b.createdAt-a.createdAt));
+    req.onerror = ()=>rej(req.error);
+  });
+}
+function getClip(id){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(['clips'],'readonly');
+    const req=tx.objectStore('clips').get(id);
+    req.onsuccess=()=>res(req.result);
+    req.onerror = ()=>rej(req.error);
+  });
+}
+function deleteClip(id){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(['clips','annos'],'readwrite');
+    tx.objectStore('clips').delete(id);
+    tx.objectStore('annos').delete(id);
+    tx.oncomplete = ()=>res();
+    tx.onerror = ()=>rej(tx.error);
+  });
+}
+function saveAnnotations(clipId, annos){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(['annos'],'readwrite');
+    const store=tx.objectStore('annos');
+    store.put({ clipId, annos });
+    tx.oncomplete = ()=>res();
+    tx.onerror = ()=>rej(tx.error);
+  });
+}
+function loadAnnotations(clipId){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(['annos'],'readonly');
+    const req=tx.objectStore('annos').get(clipId);
+    req.onsuccess = ()=>res((req.result && req.result.annos) || []);
+    req.onerror = ()=>rej(req.error);
+  });
+}
+
+/* ==========================
+   Capture (back camera only)
+========================== */
 function showErr(msg){
   els.errBox.style.display='block';
   els.errBox.textContent = msg;
@@ -141,27 +342,7 @@ function clearErr(){
   els.errBox.textContent='';
 }
 function stopTracks(s){ if(!s) return; s.getTracks().forEach(t=>t.stop()); }
-
 function parseRes(v){ const [w,h]=v.split('x').map(Number); return {width:w,height:h}; }
-
-async function ensurePermissionAndListCams(){
-  try{
-    const probe = await navigator.mediaDevices.getUserMedia({ video:true, audio:false });
-    stopTracks(probe);
-  }catch(e){
-    throw e;
-  }
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  const cams = devices.filter(d=>d.kind==='videoinput');
-  els.cameraSelect.innerHTML='';
-  cams.forEach((cam,i)=>{
-    const opt=document.createElement('option');
-    opt.value = cam.deviceId;
-    opt.textContent = cam.label || `Camera ${i+1}`;
-    els.cameraSelect.appendChild(opt);
-  });
-  els.cameraSelect.disabled = false;
-}
 
 async function startPreview(){
   clearErr();
@@ -170,28 +351,41 @@ async function startPreview(){
     const frameTarget = Number(els.fps.value);
     if(stream) stopTracks(stream);
 
-    const constraints = {
-      audio:false,
-      video:{
-        deviceId: els.cameraSelect.value ? { exact: els.cameraSelect.value } : undefined,
-        facingMode: { ideal: 'environment' },
-        width: { ideal: width },
-        height: { ideal: height },
-        frameRate: { ideal: frameTarget, max: frameTarget }
-      }
+    // Hard prefer BACK camera (environment). Some devices require 'exact', others reject it;
+    // we try exact first, then fallback to ideal.
+    const videoExact = {
+      facingMode: { exact: 'environment' },
+      width: { ideal: width },
+      height: { ideal: height },
+      frameRate: { ideal: frameTarget, max: frameTarget }
     };
-    // If device list is disabled, first request permission so labels appear
-    if(els.cameraSelect.disabled){ await ensurePermissionAndListCams(); }
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const videoIdeal = {
+      facingMode: { ideal: 'environment' },
+      width: { ideal: width },
+      height: { ideal: height },
+      frameRate: { ideal: frameTarget, max: frameTarget }
+    };
+
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ audio:false, video: videoExact });
+    }catch{
+      stream = await navigator.mediaDevices.getUserMedia({ audio:false, video: videoIdeal });
+    }
+
     els.preview.srcObject = stream;
     await els.preview.play().catch(()=>{});
     els.status.textContent='Previewing';
     els.startRec.disabled=false;
   }catch(e){
     console.error(e);
-    showErr('Camera failed to start: ' + (e.message || e.name || e.toString()) +
-      '\nTips: Use HTTPS, open in Safari (not an in-app browser), and allow Camera in Settings > Safari > Camera.');
+    showErr('Camera failed to start (back camera). ' + (e.message || e));
   }
+}
+function stopPreview(){
+  if(stream){ stopTracks(stream); stream=null; }
+  els.preview.srcObject=null;
+  els.startRec.disabled=true;
+  els.status.textContent='Idle';
 }
 
 function supportedMime(){
@@ -203,7 +397,6 @@ function supportedMime(){
   ];
   return candidates.find(t=>window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
 }
-
 function startTimer(){
   recStart = Date.now();
   els.timer.textContent='00:00';
@@ -216,18 +409,11 @@ function startTimer(){
 }
 function stopTimer(){ clearInterval(timerInt); timerInt=null; }
 
-function stopPreview(){
-  if(stream){ stopTracks(stream); stream=null; }
-  els.preview.srcObject=null;
-  els.startRec.disabled=true;
-  els.status.textContent='Idle';
-}
-
 function startRec(){
   if(!stream){ showErr('No camera stream. Tap Start Camera first.'); return; }
   clearErr();
   const type = supportedMime();
-  if(!window.MediaRecorder){ showErr('MediaRecorder not supported on this browser/iOS version. Use file upload fallback.'); return; }
+  if(!window.MediaRecorder){ showErr('MediaRecorder not supported on this browser/iOS version.'); return; }
   try{
     chunks=[];
     mediaRecorder = new MediaRecorder(stream, type ? { mimeType:type } : undefined);
@@ -236,7 +422,7 @@ function startRec(){
     return;
   }
   mediaRecorder.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
-  mediaRecorder.onstop = ()=>{
+  mediaRecorder.onstop = async ()=>{
     const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'video/mp4' });
     currentBlob = blob;
     const url = URL.createObjectURL(blob);
@@ -245,6 +431,14 @@ function startRec(){
     els.download.disabled=false;
     els.resetClip.disabled=false;
     els.status.textContent='Recorded';
+
+    // Save to library under current player
+    const profile = els.playerSelect.value;
+    const id = await saveClip(profile, blob, (blob.type||'video/mp4'));
+    currentClip = { id, profile, createdAt: Date.now(), type: blob.type||'video/mp4' };
+    annotations = [];
+    await saveAnnotations(id, annotations);
+    refreshLibrary();
   };
   mediaRecorder.start();
   els.status.textContent='Recording';
@@ -252,7 +446,6 @@ function startRec(){
   els.stopRec.disabled=false;
   startTimer();
 }
-
 function stopRec(){
   if(mediaRecorder && mediaRecorder.state!=='inactive'){ mediaRecorder.stop(); }
   els.stopRec.disabled=true;
@@ -260,21 +453,9 @@ function stopRec(){
   els.startRec.disabled=false;
 }
 
-function downloadClip(){
-  if(!currentBlob) return;
-  const a=document.createElement('a');
-  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
-  const ext=(currentBlob.type||'').includes('webm')?'webm':'mp4';
-  a.href=URL.createObjectURL(currentBlob);
-  a.download=`swing-${stamp}.${ext}`;
-  document.body.appendChild(a); a.click(); a.remove();
-}
-
-function clearClip(){
-  els.playback.removeAttribute('src'); els.playback.load();
-  els.download.disabled=true; els.resetClip.disabled=true; currentBlob=null;
-}
-
+/* ==========================
+   Playback controls
+========================== */
 function stepFrame(dir=1){
   const v=els.playback;
   const fps = 60; // conservative fallback
@@ -283,38 +464,257 @@ function stepFrame(dir=1){
   v.currentTime = Math.min(Math.max(0, v.currentTime + dir*dt), v.duration || 0);
 }
 
-// Events
+/* ==========================
+   Library UI
+========================== */
+async function refreshLibrary(){
+  const prof = els.playerSelect.value;
+  const rows = await listClips(prof);
+  els.libBody.innerHTML='';
+  if(rows.length===0){
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td colspan="3" style="opacity:.7;">No clips yet.</td>';
+    els.libBody.appendChild(tr);
+    return;
+  }
+  for(const r of rows){
+    const tr=document.createElement('tr');
+    const stamp = new Date(r.createdAt||Date.now()).toLocaleString();
+    tr.innerHTML = `
+      <td>#${r.id} <span class="tag">${(r.type||'mp4').replace('video/','')}</span></td>
+      <td>${stamp}</td>
+      <td>
+        <button data-load="${r.id}">Load</button>
+        <button data-del="${r.id}" class="danger">Delete</button>
+      </td>`;
+    els.libBody.appendChild(tr);
+  }
+  // wire buttons
+  els.libBody.querySelectorAll('button[data-load]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = Number(btn.dataset.load);
+      const rec = await getClip(id);
+      if(!rec || !rec.blob){ alert('Clip data missing'); return; }
+      currentClip = { id, profile: rec.profile, createdAt: rec.createdAt, type: rec.type||'video/mp4' };
+      const url = URL.createObjectURL(rec.blob);
+      els.playback.src = url;
+      els.playback.load();
+      els.download.disabled=false;
+      els.resetClip.disabled=false;
+      annotations = await loadAnnotations(id);
+      redrawOverlay(); // draw static annos
+    });
+  });
+  els.libBody.querySelectorAll('button[data-del]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = Number(btn.dataset.del);
+      if(!confirm('Delete clip #' + id + ' ?')) return;
+      await deleteClip(id);
+      if(currentClip && currentClip.id===id){
+        clearCurrentClip();
+      }
+      refreshLibrary();
+    });
+  });
+}
+function clearCurrentClip(){
+  els.playback.removeAttribute('src'); els.playback.load();
+  els.download.disabled=true; els.resetClip.disabled=true; currentBlob=null; currentClip=null;
+  annotations=[]; redrawOverlay();
+}
+
+/* ==========================
+   Downloads / Clear
+========================== */
+els.download.addEventListener('click', async ()=>{
+  if(currentClip){
+    const rec = await getClip(currentClip.id);
+    if(rec && rec.blob){
+      const a=document.createElement('a');
+      const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+      const ext=(rec.type||'video/mp4').includes('webm')?'webm':'mp4';
+      a.href=URL.createObjectURL(rec.blob);
+      a.download=`swing-${currentClip.id}-${stamp}.${ext}`;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+  }else if(currentBlob){
+    const a=document.createElement('a');
+    const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+    const ext=(currentBlob.type||'video/mp4').includes('webm')?'webm':'mp4';
+    a.href=URL.createObjectURL(currentBlob);
+    a.download=`swing-${stamp}.${ext}`;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+});
+els.resetClip.addEventListener('click', clearCurrentClip);
+
+/* ==========================
+   Fallback file input
+========================== */
+els.filePicker.addEventListener('change', async ()=>{
+  const f = els.filePicker.files?.[0];
+  if(!f) return;
+  const url = URL.createObjectURL(f);
+  els.playback.src = url; els.playback.load();
+  els.download.disabled=false; els.resetClip.disabled=false;
+  const profile = els.playerSelect.value;
+  const id = await saveClip(profile, f, f.type || 'video/mp4');
+  currentClip = { id, profile, createdAt: Date.now(), type: f.type||'video/mp4' };
+  annotations = [];
+  await saveAnnotations(id, annotations);
+  refreshLibrary();
+});
+
+/* ==========================
+   Annotation layer (canvas)
+========================== */
+function setTool(t){
+  currentTool = t;
+  // toggle active class
+  els.toolBar.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active', b.dataset.tool===t));
+}
+setTool('line');
+els.toolBar.querySelectorAll('.tool').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.tool)));
+
+function videoRect(){ // get drawing rect of the video inside its element (object-fit: contain)
+  const v = els.playback;
+  const bounds = v.getBoundingClientRect();
+  const vw = v.videoWidth || 0, vh = v.videoHeight || 0;
+  if(!vw || !vh) return { x:0, y:0, w:bounds.width, h:bounds.height };
+  const scale = Math.min(bounds.width/vw, bounds.height/vh);
+  const w = vw*scale, h = vh*scale;
+  const x = (bounds.width - w)/2;
+  const y = (bounds.height - h)/2;
+  return { x, y, w, h, scale, vw, vh };
+}
+function normPoint(clientX, clientY){
+  const rect = els.playback.getBoundingClientRect();
+  const vr = videoRect();
+  const x = clientX - rect.left - vr.x;
+  const y = clientY - rect.top - vr.y;
+  // normalize to [0..1] in video space
+  return { nx: Math.max(0, Math.min(1, x / vr.w)), ny: Math.max(0, Math.min(1, y / vr.h)) };
+}
+function denormPoint(nx, ny){
+  const vr = videoRect();
+  return { x: vr.x + nx*vr.w, y: vr.y + ny*vr.h };
+}
+function resizeOverlay(){
+  const r = els.playback.getBoundingClientRect();
+  els.overlay.width = r.width * devicePixelRatio;
+  els.overlay.height = r.height * devicePixelRatio;
+  els.overlay.style.width = r.width + 'px';
+  els.overlay.style.height = r.height + 'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  redrawOverlay();
+}
+window.addEventListener('resize', resizeOverlay);
+els.playback.addEventListener('loadedmetadata', resizeOverlay);
+
+function redrawOverlay(){
+  const r = els.overlay.getBoundingClientRect();
+  ctx.clearRect(0,0, r.width, r.height);
+  const color = els.annoColor.value;
+  annotations.forEach(a=>{
+    ctx.strokeStyle = a.color || color;
+    ctx.fillStyle = a.color || color;
+    ctx.lineWidth = a.thick || 3;
+    if(a.type==='line'){
+      const p1=denormPoint(a.data.x1, a.data.y1);
+      const p2=denormPoint(a.data.x2, a.data.y2);
+      ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+    }else if(a.type==='circle'){
+      const c=denormPoint(a.data.cx, a.data.cy);
+      const edge=denormPoint(a.data.cx + a.data.r, a.data.cy);
+      const radius = Math.hypot(edge.x-c.x, edge.y-c.y);
+      ctx.beginPath(); ctx.arc(c.x, c.y, radius, 0, Math.PI*2); ctx.stroke();
+    }else if(a.type==='text'){
+      const p=denormPoint(a.data.x, a.data.y);
+      ctx.font = `${(a.thick||3)*5 + 10}px sans-serif`;
+      ctx.fillText(a.data.text || 'Note', p.x, p.y);
+    }
+  });
+}
+
+let drag = null; // {start:{nx,ny}, live:{...}, type,...}
+function pointerDown(ev){
+  if(!currentClip) return; // only annotate saved/loaded clips
+  const pt = (ev.touches?.[0]) || ev;
+  const { nx, ny } = normPoint(pt.clientX, pt.clientY);
+  drag = { type: currentTool, start:{nx,ny}, color: els.annoColor.value, thick: Number(els.annoThick.value) };
+  if(currentTool==='text'){
+    const text = prompt('Note text');
+    if(text){
+      annotations.push({ type:'text', color: drag.color, thick: drag.thick, data:{ x:nx, y:ny, text } });
+      redrawOverlay();
+    }
+    drag = null;
+  }
+}
+function pointerMove(ev){
+  if(!drag) return;
+  const pt = (ev.touches?.[0]) || ev;
+  const { nx, ny } = normPoint(pt.clientX, pt.clientY);
+  drag.live = { nx, ny };
+  // live preview: redraw all + current ghost
+  redrawOverlay();
+  ctx.strokeStyle = drag.color; ctx.lineWidth = drag.thick; ctx.fillStyle = drag.color;
+  if(drag.type==='line'){
+    const p1=denormPoint(drag.start.nx, drag.start.ny);
+    const p2=denormPoint(nx, ny);
+    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+  }else if(drag.type==='circle'){
+    const c=denormPoint(drag.start.nx, drag.start.ny);
+    const edge=denormPoint(nx, ny);
+    const r=Math.hypot(edge.x-c.x, edge.y-c.y);
+    ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI*2); ctx.stroke();
+  }
+}
+function pointerUp(){
+  if(!drag) return;
+  if(drag.type==='line' && drag.live){
+    annotations.push({ type:'line', color: drag.color, thick: drag.thick, data:{ x1:drag.start.nx, y1:drag.start.ny, x2:drag.live.nx, y2:drag.live.ny } });
+  }else if(drag.type==='circle' && drag.live){
+    const r = Math.hypot(drag.live.nx-drag.start.nx, drag.live.ny-drag.start.ny);
+    annotations.push({ type:'circle', color: drag.color, thick: drag.thick, data:{ cx:drag.start.nx, cy:drag.start.ny, r } });
+  }
+  drag=null; redrawOverlay();
+}
+['pointerdown','touchstart'].forEach(e=>els.overlay.addEventListener(e, pointerDown, {passive:false}));
+['pointermove','touchmove'].forEach(e=>els.overlay.addEventListener(e, pointerMove, {passive:false}));
+['pointerup','pointercancel','touchend','touchcancel'].forEach(e=>els.overlay.addEventListener(e, pointerUp, {passive:false}));
+
+els.undoAnno.addEventListener('click', ()=>{ annotations.pop(); redrawOverlay(); });
+els.saveAnno.addEventListener('click', async ()=>{
+  if(!currentClip){ alert('Load or record a clip first.'); return; }
+  await saveAnnotations(currentClip.id, annotations);
+  alert('Annotations saved');
+});
+
+/* ==========================
+   Events / init
+========================== */
 els.startPreview.addEventListener('click', startPreview);
 els.stopPreview.addEventListener('click', stopPreview);
 els.startRec.addEventListener('click', startRec);
 els.stopRec.addEventListener('click', stopRec);
-els.download.addEventListener('click', downloadClip);
-els.resetClip.addEventListener('click', clearClip);
-els.speedBtns.forEach(b=>b.addEventListener('click', ()=>{ els.playback.playbackRate=Number(b.dataset.rate); els.playback.play(); }));
 
+els.rateBtns.forEach(b=>b.addEventListener('click', ()=>{ els.playback.playbackRate=Number(b.dataset.rate); els.playback.play(); }));
 els.stepBack.addEventListener('click', ()=>stepFrame(-1));
 els.stepFwd.addEventListener('click', ()=>stepFrame(1));
 
-// Fallback: pick a video from native camera
-els.filePicker.addEventListener('change', ()=>{
-  const f = els.filePicker.files?.[0];
-  if(!f) return;
-  currentBlob = f;
-  const url = URL.createObjectURL(f);
-  els.playback.src = url;
-  els.playback.load();
-  els.download.disabled=false;
-  els.resetClip.disabled=false;
-  els.status.textContent='Loaded file';
-});
-
-// Init
-(function init(){
+function secureCheck(){
   const secure = location.protocol==='https:' || location.hostname==='localhost' || location.hostname.endsWith('.local');
   if(!secure){ els.httpsWarn.style.display='block'; }
-  if(!('mediaDevices' in navigator)){
-    showErr('This browser does not support camera access.');
-  }
+}
+
+(async function init(){
+  secureCheck();
+  ensurePlayerSelect();
+  await openDB();
+  refreshLibrary();
+  // Initial overlay size
+  resizeOverlay();
 })();
 </script>
 </body>

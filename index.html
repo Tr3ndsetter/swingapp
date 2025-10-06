@@ -16,7 +16,6 @@
   body{ margin:0; background:linear-gradient(180deg,#0b0b0c 0%, #0d0d12 100%); color:var(--text) }
   .container{ max-width:1200px; margin:0 auto; padding:16px; }
 
-  /* Header */
   header{ position:sticky; top:0; z-index:40; backdrop-filter:saturate(140%) blur(6px);
     background:rgba(11,11,12,.75); border-bottom:1px solid var(--stroke) }
   .hdr{ display:flex; gap:16px; align-items:center; justify-content:space-between; padding:12px 16px }
@@ -39,11 +38,9 @@
   .btn:hover{ transform:translateY(-1px) }
   .btn:active{ transform:translateY(0) scale(.99) }
 
-  /* Grid */
   .grid{ display:grid; gap:16px; grid-template-columns:1fr; }
   @media (min-width: 1024px){ .grid{ grid-template-columns: 1.15fr .85fr; } }
 
-  /* Card */
   .card{ background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.0) ),
           var(--panel); border:1px solid var(--stroke); border-radius:var(--r); padding:16px; box-shadow: var(--shadow) }
   .card h2{ margin:0 0 10px 0; font-size:16px; opacity:.95 }
@@ -53,7 +50,6 @@
   .grow{ flex:1 1 auto }
   .divider{ height:1px; background:var(--stroke); margin:16px 0 }
 
-  /* Player + capture controls */
   .pill{ padding:6px 10px; border:1px solid var(--stroke); border-radius:999px; font-size:12px; color:var(--muted) }
   .segment{ display:inline-flex; background:var(--panel-2); border:1px solid var(--stroke); border-radius:12px; overflow:hidden; }
   .segment button{ border:none; background:transparent; padding:10px 14px; min-width:48px }
@@ -64,23 +60,19 @@
   .playerWrap{ position:relative }
   canvas.overlay{ position:absolute; inset:0; width:100%; height:100%; touch-action:none; border-radius:14px; }
 
-  /* Sticky action bar under the player */
   .actionbar{ position:sticky; bottom:8px; z-index:30; display:flex; gap:10px; align-items:center; justify-content:space-between;
     padding:10px 12px; background:rgba(20,20,26,.75); border:1px solid var(--stroke); border-radius:12px; backdrop-filter: blur(6px); }
 
-  /* Library */
   table{ width:100%; border-collapse:separate; border-spacing:0 10px }
   th{ text-align:left; font-size:12px; color:var(--muted); padding:0 8px }
   td{ background:var(--panel-2); border:1px solid var(--stroke); padding:10px; border-radius:12px }
   .thumb{ width:80px; height:50px; object-fit:cover; border-radius:8px; border:1px solid var(--stroke) }
 
-  /* Toasts */
   .toast{ position:fixed; right:16px; bottom:16px; display:grid; gap:8px; z-index:100 }
   .toast .item{ background:rgba(24,24,28,.9); color:var(--text); border:1px solid var(--stroke); padding:10px 12px; border-radius:12px;
     box-shadow: var(--shadow); animation: pop .18s ease-out }
   @keyframes pop{ from{ transform: translateY(6px); opacity:0 } to{ transform: translateY(0); opacity:1 } }
 
-  /* Helpers */
   .warn{ background:#382600; border:1px solid #6b4900; color:#ffdca8; padding:10px 12px; border-radius:12px }
   .tag{ font-size:11px; color:#cfd6ea; padding:3px 8px; border-radius:999px; border:1px solid var(--stroke); background:rgba(122,162,255,.18) }
 </style>
@@ -174,7 +166,8 @@
       <div class="row" style="margin-top:12px">
         <span class="tag">Tools</span>
         <div class="segment" id="toolSeg">
-          <button data-tool="line" class="active">Line</button>
+          <button data-tool="none" class="active">Play</button>
+          <button data-tool="line">Line</button>
           <button data-tool="circle">Circle</button>
           <button data-tool="text">Text</button>
         </div>
@@ -186,7 +179,7 @@
         <button id="undoAnno" class="btn ghost">Undo</button>
         <button id="saveAnno" class="btn primary">Save</button>
       </div>
-      <p class="subtle" style="margin-top:6px">Annotations are saved with this clip and player. (Timing ranges/fades coming next.)</p>
+      <p class="subtle" style="margin-top:6px">Annotations are saved with this clip and player, and stay visible for the entire playback.</p>
     </section>
 
     <!-- RIGHT: Library -->
@@ -206,34 +199,28 @@
   </div>
 </div>
 
-<!-- Toast container -->
 <div class="toast" id="toast"></div>
 
 <script>
-/* ======== State & helpers ======== */
+/* ======== Small helpers & state ======== */
 const $ = id => document.getElementById(id);
 const els = {
   httpsWarn: $('httpsWarn'),
-  // profile
   playerSelect: $('playerSelect'), addPlayer: $('addPlayer'), libPlayerTag: $('libPlayerTag'),
   libBody: $('libBody'), refreshLib: $('refreshLib'),
-  // capture
   startPreview:$('startPreview'), stopPreview:$('stopPreview'), preview:$('preview'),
   startRec:$('startRec'), stopRec:$('stopRec'), timer:$('timer'), status:$('status'),
   errBox:$('errBox'), filePicker:$('filePicker'),
-  // playback
   playback:$('playback'), download:$('download'), resetClip:$('resetClip'),
   stepBack:$('stepBack'), stepFwd:$('stepFwd'),
-  // segments
   speedSeg:$('speedSeg'), toolSeg:$('toolSeg'),
-  // anno
   overlay:$('overlay'), annoColor:$('annoColor'), annoThick:$('annoThick'),
   undoAnno:$('undoAnno'), saveAnno:$('saveAnno'),
 };
 const ctx = els.overlay.getContext('2d');
 
 let stream=null, mediaRecorder=null, chunks=[], currentBlob=null, recStart=0, timerInt=null;
-let currentTool='line', annotations=[], currentClip=null;
+let currentTool='none', annotations=[], currentClip=null;
 let targetFPS=60, targetRes='1920x1080';
 
 function toast(msg){
@@ -243,12 +230,8 @@ function toast(msg){
 function showErr(m){ els.errBox.style.display='block'; els.errBox.textContent=m; }
 function clearErr(){ els.errBox.style.display='none'; els.errBox.textContent=''; }
 function stopTracks(s){ if(!s) return; s.getTracks().forEach(t=>t.stop()); }
-
 function parseRes(v){ const [w,h]=v.split('x').map(Number); return {width:w,height:h}; }
-
-function setSegmentActive(segEl, btn){
-  segEl.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b===btn));
-}
+function setSegmentActive(segEl, btn){ segEl.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b===btn)); }
 
 /* ======== Profiles (localStorage) ======== */
 function loadProfiles(){ return JSON.parse(localStorage.getItem('swing_profiles')||'["Player 1"]'); }
@@ -264,7 +247,7 @@ els.addPlayer.addEventListener('click', ()=>{
 });
 els.playerSelect.addEventListener('change', ()=>{ els.libPlayerTag.textContent=els.playerSelect.value; refreshLibrary(); });
 
-/* ======== IndexedDB (clips + thumbnails + annos) ======== */
+/* ======== IndexedDB (clips + thumbs + annos) ======== */
 const DB='swingdb', VER=2; let db=null;
 function openDB(){
   return new Promise((res,rej)=>{
@@ -342,7 +325,9 @@ async function startPreview(){
       stream = await navigator.mediaDevices.getUserMedia({ audio:false, video: ideal });
     }
     els.preview.srcObject = stream; await els.preview.play().catch(()=>{});
-    els.status.textContent='Previewing'; els.startRec.disabled=false;
+    els.status.textContent='Previewing'; els.startRec.disabled=true; // enable after play starts
+    // Small delay to ensure play kicked in (iOS quirk)
+    setTimeout(()=>{ if (stream) els.startRec.disabled=false; }, 200);
   }catch(e){
     showErr('Camera failed to start (back camera): ' + (e.message||e));
   }
@@ -372,7 +357,6 @@ function startRec(){
   mediaRecorder.onstop=async ()=>{
     const blob=new Blob(chunks,{type:mediaRecorder.mimeType || 'video/mp4'}); currentBlob=blob;
     const url=URL.createObjectURL(blob); els.playback.src=url; els.playback.load(); els.download.disabled=false; els.resetClip.disabled=false; els.status.textContent='Recorded';
-    // save clip + thumbnail
     const profile=els.playerSelect.value, type=blob.type||'video/mp4'; const thumb=snapshotFromVideo(els.preview);
     const id = await saveClip(profile, blob, type, thumb); currentClip={ id, profile, createdAt:Date.now(), type };
     annotations=[]; await saveAnnotations(id, annotations); refreshLibrary(); toast('Clip saved');
@@ -452,8 +436,15 @@ function generateThumbFromVideo(src){
   });
 }
 
-/* ======== Annotations ======== */
-function setTool(t){ currentTool=t; setSegmentActive(els.toolSeg, els.toolSeg.querySelector(`[data-tool="${t}"]`)); }
+/* ======== Annotations (Play mode + tools) ======== */
+function setTool(t){
+  if (currentTool === t && t !== 'none') t = 'none'; // tapping same tool toggles back to Play
+  currentTool = t;
+  els.toolSeg.querySelectorAll('button')
+    .forEach(b => b.classList.toggle('active', b.dataset.tool === t));
+  // In Play mode, allow taps to hit the video controls
+  els.overlay.style.pointerEvents = (t === 'none') ? 'none' : 'auto';
+}
 function videoRect(){
   const v=els.playback; const b=v.getBoundingClientRect(); const vw=v.videoWidth||0, vh=v.videoHeight||0;
   if(!vw || !vh) return { x:0, y:0, w:b.width, h:b.height };
@@ -472,6 +463,11 @@ function resizeOverlay(){
   ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); redrawOverlay();
 }
 window.addEventListener('resize', resizeOverlay); els.playback.addEventListener('loadedmetadata', resizeOverlay);
+
+// Always keep annotations visible during playback; redraw on common video events
+['play','pause','timeupdate','seeking','seeked','ratechange','loadedmetadata'].forEach(ev =>
+  els.playback.addEventListener(ev, redrawOverlay)
+);
 
 function redrawOverlay(){
   const r=els.overlay.getBoundingClientRect(); ctx.clearRect(0,0,r.width,r.height);
@@ -492,11 +488,12 @@ function redrawOverlay(){
 let drag=null;
 function down(ev){
   if(!currentClip) return;
+  if(currentTool === 'none') return; // Play mode: ignore touches on overlay
   const pt=(ev.touches?.[0])||ev; const {nx,ny}=normPoint(pt.clientX, pt.clientY);
   drag={ type:currentTool, start:{nx,ny}, color:els.annoColor.value, thick:Number(els.annoThick.value) };
   if(currentTool==='text'){
     const text=prompt('Note'); if(text){ annotations.push({ type:'text', color:drag.color, thick:drag.thick, data:{ x:nx, y:ny, text } }); redrawOverlay(); toast('Text added'); }
-    drag=null;
+    drag=null; setTool('none'); // auto-return to Play
   }
 }
 function move(ev){
@@ -511,7 +508,7 @@ function up(){
   if(drag.type==='line' && drag.live){ annotations.push({ type:'line', color:drag.color, thick:drag.thick, data:{ x1:drag.start.nx, y1:drag.start.ny, x2:drag.live.nx, y2:drag.live.ny } }); toast('Line added'); }
   if(drag.type==='circle' && drag.live){ const r=Math.hypot(drag.live.nx-drag.start.nx, drag.live.ny-drag.start.ny);
     annotations.push({ type:'circle', color:drag.color, thick:drag.thick, data:{ cx:drag.start.nx, cy:drag.start.ny, r } }); toast('Circle added'); }
-  drag=null; redrawOverlay();
+  drag=null; redrawOverlay(); setTool('none'); // auto-return to Play
 }
 ['pointerdown','touchstart'].forEach(e=>els.overlay.addEventListener(e,down,{passive:false}));
 ['pointermove','touchmove'].forEach(e=>els.overlay.addEventListener(e,move,{passive:false}));
@@ -544,10 +541,9 @@ function secureCheck(){ const ok = location.protocol==='https:' || location.host
   await openDB();
   renderProfiles();
   refreshLibrary();
-  setTool('line');
+  setTool('none');                  // Start in Play mode
   resizeOverlay();
 })();
 </script>
 </body>
 </html>
-

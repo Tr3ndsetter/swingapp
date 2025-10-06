@@ -26,7 +26,7 @@
 
 <main class="wrap">
   <div id="httpsWarn" class="warn" style="display:none">
-    This page isn’t on <b>HTTPS</b>. iOS blocks camera on non-secure pages. Host on https (Vercel/Netlify/GitHub Pages) or use localhost.
+    This page isn’t on <b>HTTPS</b>. iOS blocks camera on non-secure pages. Host on https (GitHub Pages) or use localhost.
   </div>
 
   <section class="card">
@@ -59,7 +59,7 @@
     </div>
 
     <div class="hint" style="margin-top:8px">
-      Tip: Mobile Safari often caps at ~60 fps for web capture. The app requests higher; the browser gives the best it can.
+      Mobile Safari often caps at ~60 fps for web capture. We request higher; the browser gives the best it can.
     </div>
 
     <video id="preview" playsinline muted></video>
@@ -145,12 +145,11 @@ function stopTracks(s){ if(!s) return; s.getTracks().forEach(t=>t.stop()); }
 function parseRes(v){ const [w,h]=v.split('x').map(Number); return {width:w,height:h}; }
 
 async function ensurePermissionAndListCams(){
-  // Request a tiny stream first (iOS won’t label devices until permission)
   try{
     const probe = await navigator.mediaDevices.getUserMedia({ video:true, audio:false });
     stopTracks(probe);
   }catch(e){
-    throw e; // propagate so we display it
+    throw e;
   }
   const devices = await navigator.mediaDevices.enumerateDevices();
   const cams = devices.filter(d=>d.kind==='videoinput');
@@ -181,15 +180,17 @@ async function startPreview(){
         frameRate: { ideal: frameTarget, max: frameTarget }
       }
     };
+    // If device list is disabled, first request permission so labels appear
+    if(els.cameraSelect.disabled){ await ensurePermissionAndListCams(); }
     stream = await navigator.mediaDevices.getUserMedia(constraints);
     els.preview.srcObject = stream;
-    await els.preview.play().catch(()=>{}); // iOS requires user gesture; already clicking
+    await els.preview.play().catch(()=>{});
     els.status.textContent='Previewing';
     els.startRec.disabled=false;
   }catch(e){
     console.error(e);
     showErr('Camera failed to start: ' + (e.message || e.name || e.toString()) +
-      '\nTips: Use HTTPS, open in Safari (not in-app), and allow Camera in Settings > Safari > Camera.');
+      '\nTips: Use HTTPS, open in Safari (not an in-app browser), and allow Camera in Settings > Safari > Camera.');
   }
 }
 
@@ -309,27 +310,11 @@ els.filePicker.addEventListener('change', ()=>{
 
 // Init
 (function init(){
-  // HTTPS warning
   const secure = location.protocol==='https:' || location.hostname==='localhost' || location.hostname.endsWith('.local');
   if(!secure){ els.httpsWarn.style.display='block'; }
-
   if(!('mediaDevices' in navigator)){
     showErr('This browser does not support camera access.');
-    return;
   }
-
-  // Only list cameras AFTER permission succeeds (more reliable on iOS)
-  els.startPreview.addEventListener('click', async ()=>{
-    // If we don’t yet have real labels, try to grant first time quickly:
-    if(els.cameraSelect.disabled){
-      try{
-        await ensurePermissionAndListCams();
-      }catch(e){
-        showErr('Permission required: ' + (e.message||e));
-        return;
-      }
-    }
-  }, { once:false });
 })();
 </script>
 </body>

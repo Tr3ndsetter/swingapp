@@ -3,717 +3,548 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Softball Swing Capture (Web)</title>
+<meta name="theme-color" content="#0b0b0c">
+<title>Softball Swing Capture</title>
 <style>
-  :root { --gap: 12px; --pad: 14px; --radius: 14px; }
-  *{ box-sizing:border-box; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; }
-  body{ margin:0; background:#0b0b0c; color:#eaeaea; }
-  header{ padding:var(--pad); border-bottom:1px solid #222; position:sticky; top:0; background:#0b0b0c; z-index:10; }
-  h1{ font-size:18px; margin:0; }
-  .wrap{ padding:var(--pad); display:grid; gap:var(--gap); max-width:1100px; margin:0 auto; }
-  .grid{ display:grid; gap:var(--gap); grid-template-columns: 1fr; }
-  @media (min-width: 1024px){ .grid{ grid-template-columns: 1.1fr .9fr; } }
-  .card{ background:#121214; border:1px solid #1f1f22; border-radius:var(--radius); padding:var(--pad); }
-  .row{ display:flex; flex-wrap:wrap; gap:var(--gap); align-items:center; }
-  .grow{ flex:1 1 auto; }
-  select,button,input[type="file"],input[type="text"],input[type="number"],textarea{
-    background:#1a1a1f; color:#eaeaea; border:1px solid #2a2a31; border-radius:10px; padding:10px 12px;
+  :root{
+    --bg:#0b0b0c; --panel:#121216; --panel-2:#15151a; --stroke:#22232a; --muted:#b8bcc7; --text:#f2f3f5;
+    --brand:#4f7cff; --brand-2:#365dff; --danger:#ff4d6d; --ok:#35c77a; --ring:#7aa2ff;
+    --r:16px; --pad:16px; --gap:12px; --shadow:0 6px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
   }
-  button{ cursor:pointer; } 
-  button.primary{ background:#2a62ff; border-color:#2a62ff; } 
-  button.danger{ background:#ff2a4a; border-color:#ff2a4a; } 
-  button:disabled{ opacity:.5; cursor:not-allowed; }
-  video{ width:100%; border-radius:var(--radius); background:black; max-height:70vh; object-fit:contain; }
-  canvas.overlay{ position:absolute; inset:0; width:100%; height:100%; touch-action:none; }
-  .playerWrap{ position:relative; }
-  .pill{ padding:4px 8px; border:1px solid #2a2a31; border-radius:999px; font-size:12px; }
-  .warn{ background:#3b2a00; border:1px solid #644400; color:#ffd58a; padding:10px 12px; border-radius:10px; }
-  .hint{ font-size:12px; opacity:.85; }
-  .libTable{ width:100%; border-collapse: collapse; }
-  .libTable th,.libTable td{ border-bottom:1px solid #25252a; padding:8px; text-align:left; font-size:14px; }
-  .tool{ padding:8px 10px; border:1px solid #2a2a31; border-radius:8px; }
-  .tools .active{ outline:2px solid #2a62ff; }
-  .tag{ font-size:11px; opacity:.85; border:1px solid #404048; padding:2px 6px; border-radius:999px; }
+  *{ box-sizing:border-box; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial }
+  html,body{ height:100% }
+  body{ margin:0; background:linear-gradient(180deg,#0b0b0c 0%, #0d0d12 100%); color:var(--text) }
+  .container{ max-width:1200px; margin:0 auto; padding:16px; }
+
+  /* Header */
+  header{ position:sticky; top:0; z-index:40; backdrop-filter:saturate(140%) blur(6px);
+    background:rgba(11,11,12,.75); border-bottom:1px solid var(--stroke) }
+  .hdr{ display:flex; gap:16px; align-items:center; justify-content:space-between; padding:12px 16px }
+  .brand{ display:flex; align-items:center; gap:12px; font-weight:700; letter-spacing:.2px }
+  .logo{ width:28px; height:28px; display:grid; place-items:center; border-radius:10px; background:linear-gradient(225deg,#ffd166,#ff8fab);
+    box-shadow: var(--shadow); color:#111; font-size:16px; }
+  .profilebar{ display:flex; gap:8px; align-items:center; padding:6px; background:var(--panel-2); border:1px solid var(--stroke);
+    border-radius:999px; box-shadow: var(--shadow); }
+  select, input[type="text"], input[type="number"], button, input[type="file"]{
+    color:var(--text); background:var(--panel-2); border:1px solid var(--stroke); border-radius:10px; padding:10px 12px;
+    transition: all .15s ease; outline:none;
+  }
+  select:focus, input:focus, button:focus{ box-shadow:0 0 0 2px var(--ring); border-color:transparent }
+  button{ cursor:pointer }
+  .btn{ background:var(--panel-2) }
+  .btn.primary{ background:linear-gradient(180deg,var(--brand) 0%, var(--brand-2) 100%); border-color:transparent }
+  .btn.danger{ background:linear-gradient(180deg,#ff6b88 0%, var(--danger) 100%); border-color:transparent }
+  .btn.ghost{ background:transparent; border-color:var(--stroke) }
+  .btn:disabled{ opacity:.6; cursor:not-allowed }
+  .btn:hover{ transform:translateY(-1px) }
+  .btn:active{ transform:translateY(0) scale(.99) }
+
+  /* Grid */
+  .grid{ display:grid; gap:16px; grid-template-columns:1fr; }
+  @media (min-width: 1024px){ .grid{ grid-template-columns: 1.15fr .85fr; } }
+
+  /* Card */
+  .card{ background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.0) ),
+          var(--panel); border:1px solid var(--stroke); border-radius:var(--r); padding:16px; box-shadow: var(--shadow) }
+  .card h2{ margin:0 0 10px 0; font-size:16px; opacity:.95 }
+  .subtle{ color:var(--muted); font-size:12px }
+
+  .row{ display:flex; flex-wrap:wrap; gap:12px; align-items:center }
+  .grow{ flex:1 1 auto }
+  .divider{ height:1px; background:var(--stroke); margin:16px 0 }
+
+  /* Player + capture controls */
+  .pill{ padding:6px 10px; border:1px solid var(--stroke); border-radius:999px; font-size:12px; color:var(--muted) }
+  .segment{ display:inline-flex; background:var(--panel-2); border:1px solid var(--stroke); border-radius:12px; overflow:hidden; }
+  .segment button{ border:none; background:transparent; padding:10px 14px; min-width:48px }
+  .segment button.active{ background:rgba(122,162,255,.18); color:#cfe0ff }
+  .segment button + button{ border-left:1px solid var(--stroke) }
+
+  video{ width:100%; border-radius:14px; background:black; object-fit:contain; max-height:72vh }
+  .playerWrap{ position:relative }
+  canvas.overlay{ position:absolute; inset:0; width:100%; height:100%; touch-action:none; border-radius:14px; }
+
+  /* Sticky action bar under the player */
+  .actionbar{ position:sticky; bottom:8px; z-index:30; display:flex; gap:10px; align-items:center; justify-content:space-between;
+    padding:10px 12px; background:rgba(20,20,26,.75); border:1px solid var(--stroke); border-radius:12px; backdrop-filter: blur(6px); }
+
+  /* Library */
+  table{ width:100%; border-collapse:separate; border-spacing:0 10px }
+  th{ text-align:left; font-size:12px; color:var(--muted); padding:0 8px }
+  td{ background:var(--panel-2); border:1px solid var(--stroke); padding:10px; border-radius:12px }
+  .thumb{ width:80px; height:50px; object-fit:cover; border-radius:8px; border:1px solid var(--stroke) }
+
+  /* Toasts */
+  .toast{ position:fixed; right:16px; bottom:16px; display:grid; gap:8px; z-index:100 }
+  .toast .item{ background:rgba(24,24,28,.9); color:var(--text); border:1px solid var(--stroke); padding:10px 12px; border-radius:12px;
+    box-shadow: var(--shadow); animation: pop .18s ease-out }
+  @keyframes pop{ from{ transform: translateY(6px); opacity:0 } to{ transform: translateY(0); opacity:1 } }
+
+  /* Helpers */
+  .warn{ background:#382600; border:1px solid #6b4900; color:#ffdca8; padding:10px 12px; border-radius:12px }
+  .tag{ font-size:11px; color:#cfd6ea; padding:3px 8px; border-radius:999px; border:1px solid var(--stroke); background:rgba(122,162,255,.18) }
 </style>
 </head>
 <body>
 <header>
-  <div class="row" style="justify-content:space-between;">
-    <h1>Softball Swing Capture (Web)</h1>
-    <div class="row">
-      <label for="playerSelect">Player:</label>
+  <div class="hdr container">
+    <div class="brand">
+      <div class="logo">🥎</div>
+      <div>Softball Swing Capture</div>
+    </div>
+    <div class="profilebar">
+      <span class="subtle">Player</span>
       <select id="playerSelect"></select>
-      <button id="addPlayer" class="primary">+ New Player</button>
+      <button id="addPlayer" class="btn primary" title="Add player">+ New</button>
     </div>
   </div>
 </header>
 
-<main class="wrap">
-  <div id="httpsWarn" class="warn" style="display:none">
-    This page isn’t on <b>HTTPS</b>. iOS blocks camera on non-secure pages. Use your GitHub Pages URL.
-  </div>
+<div class="container">
+  <div id="httpsWarn" class="warn" style="display:none">Use your HTTPS Pages URL; iOS blocks camera on file://</div>
 
   <div class="grid">
-    <!-- LEFT: Capture & Playback + Annotations -->
+    <!-- LEFT: Capture + Playback -->
     <section class="card">
-      <h2 style="margin-top:0;font-size:16px;">Capture</h2>
-      <div class="row" style="justify-content:space-between; gap:16px; align-items:flex-end;">
-        <div style="min-width:160px;">
-          <label>Resolution</label><br/>
-          <select id="resolution">
-            <option value="1920x1080">1080p (ideal)</option>
-            <option value="1280x720">720p</option>
-            <option value="640x480">480p</option>
-          </select>
+      <h2>Capture</h2>
+      <div class="row">
+        <div class="segment" title="Target FPS">
+          <button data-fps="30">30</button>
+          <button data-fps="60" class="active">60</button>
+          <button data-fps="120">120</button>
+          <button data-fps="240">240</button>
         </div>
-        <div style="min-width:160px;">
-          <label>Target FPS</label><br/>
-          <select id="fps">
-            <option value="240">240 (try)</option>
-            <option value="120">120 (try)</option>
-            <option value="60" selected>60 (reliable)</option>
-            <option value="30">30</option>
-          </select>
+        <div class="segment" title="Resolution">
+          <button data-res="640x480">480p</button>
+          <button data-res="1280x720">720p</button>
+          <button data-res="1920x1080" class="active">1080p</button>
         </div>
-        <div class="row">
-          <button id="startPreview" class="primary">Start Camera</button>
-          <button id="stopPreview">Stop Camera</button>
-        </div>
+        <div class="grow"></div>
+        <button id="startPreview" class="btn primary">Start Camera</button>
+        <button id="stopPreview" class="btn ghost">Stop</button>
+        <span id="status" class="pill">Idle</span>
+        <span id="timer" class="pill">00:00</span>
       </div>
-      <div class="hint" style="margin-top:8px">
-        We hard-request the <b>back camera</b> (environment). Mobile Safari often caps at ~60 fps; browser returns best available.
+      <p class="subtle">Back camera only. Mobile Safari often caps at ~60 fps; we’ll request higher and accept the best available.</p>
+
+      <div class="playerWrap">
+        <video id="preview" playsinline muted></video>
       </div>
 
-      <video id="preview" playsinline muted></video>
-
-      <div class="row" style="justify-content:space-between; margin-top:12px;">
-        <div class="row" style="gap:8px;">
-          <button id="startRec" class="primary" disabled>Record</button>
-          <button id="stopRec" class="danger" disabled>Stop</button>
-        </div>
-        <div class="row" style="gap:8px;">
-          <span id="timer" class="pill">00:00</span>
-          <span id="status" class="pill">Idle</span>
-        </div>
+      <div class="row" style="margin-top:10px">
+        <button id="startRec" class="btn primary" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right:6px"><circle cx="12" cy="12" r="6"/></svg>
+          Record
+        </button>
+        <button id="stopRec" class="btn danger" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right:6px"><rect x="7" y="7" width="10" height="10"/></svg>
+          Stop
+        </button>
+        <div class="grow"></div>
+        <span class="subtle">Fallback:</span>
+        <input id="filePicker" type="file" accept="video/*" capture="environment" />
       </div>
 
       <div id="errBox" class="warn" style="display:none; margin-top:10px;"></div>
 
-      <div style="margin-top:12px;">
-        <div class="hint">If camera is blocked, use this fallback to record with the native camera and load the clip:</div>
-        <input id="filePicker" type="file" accept="video/*" capture="environment" />
-      </div>
+      <div class="divider"></div>
 
-      <hr style="border-color:#222; margin:16px 0;"/>
-
-      <h2 style="margin-top:0;font-size:16px;">Playback & Annotations</h2>
-
+      <h2>Playback & Annotations</h2>
       <div class="playerWrap">
         <video id="playback" controls playsinline></video>
         <canvas id="overlay" class="overlay"></canvas>
+        <div class="actionbar">
+          <div class="segment" id="speedSeg">
+            <button data-rate="1" class="active">1×</button>
+            <button data-rate="0.5">½×</button>
+            <button data-rate="0.2">⅕×</button>
+            <button data-rate="0.1">1/10×</button>
+          </div>
+          <div class="row">
+            <button id="stepBack" class="btn" title="Prev frame">⟨</button>
+            <button id="stepFwd" class="btn" title="Next frame">⟩</button>
+          </div>
+          <div class="row">
+            <button id="download" class="btn ghost" disabled>Download</button>
+            <button id="resetClip" class="btn ghost" disabled>Clear</button>
+          </div>
+        </div>
       </div>
 
-      <div class="row" style="margin-top:12px;">
-        <div class="row">
-          <button data-rate="1">1×</button>
-          <button data-rate="0.5">½×</button>
-          <button data-rate="0.2">⅕×</button>
-          <button data-rate="0.1">1/10×</button>
-        </div>
-        <div class="row">
-          <button id="stepBack">⟨ Frame</button>
-          <button id="stepFwd">Frame ⟩</button>
+      <div class="row" style="margin-top:12px">
+        <span class="tag">Tools</span>
+        <div class="segment" id="toolSeg">
+          <button data-tool="line" class="active">Line</button>
+          <button data-tool="circle">Circle</button>
+          <button data-tool="text">Text</button>
         </div>
         <div class="grow"></div>
-        <div class="row">
-          <button id="download" disabled>Download MP4</button>
-          <button id="resetClip" disabled>Clear</button>
-        </div>
+        <label class="subtle">Color</label>
+        <input type="color" id="annoColor" value="#ffda2a" style="width:44px; height:36px; padding:0; border-radius:8px; border:1px solid var(--stroke); background:var(--panel-2)">
+        <label class="subtle">Thickness</label>
+        <input type="number" id="annoThick" min="1" max="12" value="3" style="width:64px">
+        <button id="undoAnno" class="btn ghost">Undo</button>
+        <button id="saveAnno" class="btn primary">Save</button>
       </div>
-
-      <!-- Annotation tools -->
-      <div class="card" style="margin-top:12px;">
-        <div class="row tools" id="toolBar">
-          <span class="tag">Tools</span>
-          <button class="tool" data-tool="line">Line</button>
-          <button class="tool" data-tool="circle">Circle</button>
-          <button class="tool" data-tool="text">Text</button>
-          <div class="grow"></div>
-          <label>Color <input type="color" id="annoColor" value="#ffda2a" style="width:48px;height:36px;padding:0;border-radius:8px;border:1px solid #2a2a31;background:#1a1a1f;"></label>
-          <label>Thickness <input type="number" id="annoThick" min="1" max="12" value="3" style="width:64px;"></label>
-          <button id="undoAnno">Undo</button>
-          <button id="saveAnno" class="primary">Save Annotations</button>
-        </div>
-        <div class="hint">Annotations attach to the <b>current clip</b> and the <b>selected player</b>. They display for the entire clip (timing ranges can be added later).</div>
-      </div>
+      <p class="subtle" style="margin-top:6px">Annotations are saved with this clip and player. (Timing ranges/fades coming next.)</p>
     </section>
 
-    <!-- RIGHT: Library per player -->
+    <!-- RIGHT: Library -->
     <section class="card">
-      <div class="row" style="justify-content:space-between;align-items:center;">
-        <h2 style="margin:0;font-size:16px;">Library <span id="libPlayerTag" class="tag"></span></h2>
-        <button id="refreshLib">Refresh</button>
+      <div class="row" style="justify-content:space-between">
+        <h2>Library <span id="libPlayerTag" class="tag"></span></h2>
+        <button id="refreshLib" class="btn ghost">Refresh</button>
       </div>
-      <table class="libTable" id="libTable">
-        <thead><tr><th>Clip</th><th>When</th><th>Actions</th></tr></thead>
-        <tbody id="libBody"><tr><td colspan="3" style="opacity:.7;">No clips yet.</td></tr></tbody>
+      <table>
+        <thead><tr><th>Clip</th><th>When</th><th></th></tr></thead>
+        <tbody id="libBody">
+          <tr><td colspan="3" class="subtle" style="padding:8px 0">No clips yet—record or upload a video to get started.</td></tr>
+        </tbody>
       </table>
-      <div class="hint" style="margin-top:8px;">Data is stored on this device in your browser (IndexedDB). Deleting site data clears it.</div>
+      <p class="subtle">Everything stays on this device (IndexedDB). Clearing site data will remove the library.</p>
     </section>
   </div>
-</main>
+</div>
+
+<!-- Toast container -->
+<div class="toast" id="toast"></div>
 
 <script>
-/* ==========================
-   Utilities & State
-========================== */
+/* ======== State & helpers ======== */
+const $ = id => document.getElementById(id);
 const els = {
-  httpsWarn: document.getElementById('httpsWarn'),
-  // player/profiles
-  playerSelect: document.getElementById('playerSelect'),
-  addPlayer: document.getElementById('addPlayer'),
-  libPlayerTag: document.getElementById('libPlayerTag'),
-  libBody: document.getElementById('libBody'),
-  refreshLib: document.getElementById('refreshLib'),
-
+  httpsWarn: $('httpsWarn'),
+  // profile
+  playerSelect: $('playerSelect'), addPlayer: $('addPlayer'), libPlayerTag: $('libPlayerTag'),
+  libBody: $('libBody'), refreshLib: $('refreshLib'),
   // capture
-  resolution: document.getElementById('resolution'),
-  fps: document.getElementById('fps'),
-  startPreview: document.getElementById('startPreview'),
-  stopPreview: document.getElementById('stopPreview'),
-  preview: document.getElementById('preview'),
-  startRec: document.getElementById('startRec'),
-  stopRec: document.getElementById('stopRec'),
-  status: document.getElementById('status'),
-  timer: document.getElementById('timer'),
-  errBox: document.getElementById('errBox'),
-  filePicker: document.getElementById('filePicker'),
-
+  startPreview:$('startPreview'), stopPreview:$('stopPreview'), preview:$('preview'),
+  startRec:$('startRec'), stopRec:$('stopRec'), timer:$('timer'), status:$('status'),
+  errBox:$('errBox'), filePicker:$('filePicker'),
   // playback
-  playback: document.getElementById('playback'),
-  download: document.getElementById('download'),
-  resetClip: document.getElementById('resetClip'),
-  stepBack: document.getElementById('stepBack'),
-  stepFwd: document.getElementById('stepFwd'),
-  rateBtns: [...document.querySelectorAll('[data-rate]')],
-
-  // annotations
-  toolBar: document.getElementById('toolBar'),
-  overlay: document.getElementById('overlay'),
-  annoColor: document.getElementById('annoColor'),
-  annoThick: document.getElementById('annoThick'),
-  undoAnno: document.getElementById('undoAnno'),
-  saveAnno: document.getElementById('saveAnno'),
+  playback:$('playback'), download:$('download'), resetClip:$('resetClip'),
+  stepBack:$('stepBack'), stepFwd:$('stepFwd'),
+  // segments
+  speedSeg:$('speedSeg'), toolSeg:$('toolSeg'),
+  // anno
+  overlay:$('overlay'), annoColor:$('annoColor'), annoThick:$('annoThick'),
+  undoAnno:$('undoAnno'), saveAnno:$('saveAnno'),
 };
-
-let stream=null, mediaRecorder=null, chunks=[], currentBlob=null, timerInt=null, recStart=0;
-let currentClip = null; // {id, profile, createdAt, type}
-let currentTool = 'line';
-let annotations = []; // {type, color, thick, data: {x1,y1,x2,y2} or {cx,cy,r} or {x,y,text}}
 const ctx = els.overlay.getContext('2d');
 
-/* ==========================
-   Profiles (localStorage) 
-========================== */
-function loadProfiles(){
-  const raw = localStorage.getItem('swing_profiles');
-  let arr = raw ? JSON.parse(raw) : ['Player 1'];
-  if(arr.length===0) arr=['Player 1'];
-  return arr;
+let stream=null, mediaRecorder=null, chunks=[], currentBlob=null, recStart=0, timerInt=null;
+let currentTool='line', annotations=[], currentClip=null;
+let targetFPS=60, targetRes='1920x1080';
+
+function toast(msg){
+  const t=$('toast'); const div=document.createElement('div'); div.className='item'; div.textContent=msg;
+  t.appendChild(div); setTimeout(()=>{ div.style.opacity='0'; div.style.transform='translateY(6px)'; setTimeout(()=>div.remove(),220); }, 1800);
 }
-function saveProfiles(arr){
-  localStorage.setItem('swing_profiles', JSON.stringify(arr));
+function showErr(m){ els.errBox.style.display='block'; els.errBox.textContent=m; }
+function clearErr(){ els.errBox.style.display='none'; els.errBox.textContent=''; }
+function stopTracks(s){ if(!s) return; s.getTracks().forEach(t=>t.stop()); }
+
+function parseRes(v){ const [w,h]=v.split('x').map(Number); return {width:w,height:h}; }
+
+function setSegmentActive(segEl, btn){
+  segEl.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b===btn));
 }
-function ensurePlayerSelect(){
-  const list = loadProfiles();
-  els.playerSelect.innerHTML='';
-  list.forEach(name=>{
-    const opt=document.createElement('option'); opt.value=name; opt.textContent=name;
-    els.playerSelect.appendChild(opt);
-  });
+
+/* ======== Profiles (localStorage) ======== */
+function loadProfiles(){ return JSON.parse(localStorage.getItem('swing_profiles')||'["Player 1"]'); }
+function saveProfiles(arr){ localStorage.setItem('swing_profiles', JSON.stringify(arr)); }
+function renderProfiles(){
+  const arr=loadProfiles();
+  els.playerSelect.innerHTML = arr.map(n=>`<option value="${n}">${n}</option>`).join('');
   els.libPlayerTag.textContent = els.playerSelect.value;
 }
 els.addPlayer.addEventListener('click', ()=>{
-  const name = prompt('New player name');
-  if(!name) return;
-  const list = loadProfiles();
-  if(!list.includes(name)){ list.push(name); saveProfiles(list); ensurePlayerSelect(); els.playerSelect.value = name; els.libPlayerTag.textContent=name; refreshLibrary(); }
+  const name = prompt('New player name'); if(!name) return;
+  const arr=loadProfiles(); if(!arr.includes(name)){ arr.push(name); saveProfiles(arr); renderProfiles(); els.playerSelect.value=name; els.libPlayerTag.textContent=name; refreshLibrary(); }
 });
 els.playerSelect.addEventListener('change', ()=>{ els.libPlayerTag.textContent=els.playerSelect.value; refreshLibrary(); });
 
-/* ==========================
-   IndexedDB (clips + annotations)
-========================== */
-const DB_NAME = 'swingdb';
-const DB_VER = 1;
-let db = null;
-
+/* ======== IndexedDB (clips + thumbnails + annos) ======== */
+const DB='swingdb', VER=2; let db=null;
 function openDB(){
   return new Promise((res,rej)=>{
-    const req = indexedDB.open(DB_NAME, DB_VER);
-    req.onupgradeneeded = (e)=>{
-      const d = req.result;
+    const req=indexedDB.open(DB, VER);
+    req.onupgradeneeded=()=>{
+      const d=req.result;
       if(!d.objectStoreNames.contains('clips')){
-        const store = d.createObjectStore('clips', { keyPath: 'id', autoIncrement: true });
-        store.createIndex('by_profile','profile',{unique:false});
+        const s=d.createObjectStore('clips',{ keyPath:'id', autoIncrement:true });
+        s.createIndex('by_profile','profile',{unique:false});
       }
       if(!d.objectStoreNames.contains('annos')){
-        const store = d.createObjectStore('annos', { keyPath: 'clipId' });
+        d.createObjectStore('annos',{ keyPath:'clipId' });
       }
     };
-    req.onsuccess = ()=>{ db=req.result; res(db); };
-    req.onerror = ()=>rej(req.error);
+    req.onsuccess=()=>{ db=req.result; res(); };
+    req.onerror=()=>rej(req.error);
   });
 }
-
-function saveClip(profile, blob, type){
+function saveClip(profile, blob, type, thumbDataUrl){
   return new Promise((res,rej)=>{
-    const tx = db.transaction(['clips'],'readwrite');
-    const store = tx.objectStore('clips');
-    const rec = { profile, createdAt: Date.now(), type, /* blob stored in separate put to keep reference */ };
-    const addReq = store.add(rec);
-    addReq.onsuccess = ()=>{
-      const id = addReq.result;
-      // put blob under same key in same store using put with the same object (structured clone stores blob)
-      const getReq = store.get(id);
-      getReq.onsuccess = ()=>{
-        const obj = getReq.result; obj.blob = blob;
-        const putReq = store.put(obj);
-        putReq.onsuccess = ()=>res(id);
-        putReq.onerror = ()=>rej(putReq.error);
+    const tx=db.transaction(['clips'],'readwrite'); const st=tx.objectStore('clips');
+    const base={ profile, createdAt:Date.now(), type, thumb:thumbDataUrl };
+    const add=st.add(base);
+    add.onsuccess=()=>{
+      const id=add.result;
+      st.get(id).onsuccess=e=>{
+        const obj=e.target.result; obj.blob=blob; st.put(obj).onsuccess=()=>res(id);
       };
     };
-    addReq.onerror = ()=>rej(addReq.error);
+    add.onerror=()=>rej(add.error);
   });
 }
 function listClips(profile){
   return new Promise((res,rej)=>{
-    const tx = db.transaction(['clips'],'readonly');
-    const idx = tx.objectStore('clips').index('by_profile');
-    const req = idx.getAll(profile);
-    req.onsuccess = ()=>res(req.result.sort((a,b)=>b.createdAt-a.createdAt));
-    req.onerror = ()=>rej(req.error);
-  });
-}
-function getClip(id){
-  return new Promise((res,rej)=>{
     const tx=db.transaction(['clips'],'readonly');
-    const req=tx.objectStore('clips').get(id);
-    req.onsuccess=()=>res(req.result);
-    req.onerror = ()=>rej(req.error);
+    tx.objectStore('clips').index('by_profile').getAll(profile).onsuccess=e=>{
+      const arr=e.target.result || []; res(arr.sort((a,b)=>b.createdAt-a.createdAt));
+    };
   });
 }
+function getClip(id){ return db.transaction(['clips'],'readonly').objectStore('clips').get(id); }
 function deleteClip(id){
   return new Promise((res,rej)=>{
     const tx=db.transaction(['clips','annos'],'readwrite');
-    tx.objectStore('clips').delete(id);
-    tx.objectStore('annos').delete(id);
-    tx.oncomplete = ()=>res();
-    tx.onerror = ()=>rej(tx.error);
+    tx.objectStore('clips').delete(id); tx.objectStore('annos').delete(id);
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
   });
 }
 function saveAnnotations(clipId, annos){
   return new Promise((res,rej)=>{
-    const tx=db.transaction(['annos'],'readwrite');
-    const store=tx.objectStore('annos');
-    store.put({ clipId, annos });
-    tx.oncomplete = ()=>res();
-    tx.onerror = ()=>rej(tx.error);
+    const tx=db.transaction(['annos'],'readwrite'); tx.objectStore('annos').put({ clipId, annos });
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
   });
 }
 function loadAnnotations(clipId){
   return new Promise((res,rej)=>{
-    const tx=db.transaction(['annos'],'readonly');
-    const req=tx.objectStore('annos').get(clipId);
-    req.onsuccess = ()=>res((req.result && req.result.annos) || []);
-    req.onerror = ()=>rej(req.error);
+    const tx=db.transaction(['annos'],'readonly'); tx.objectStore('annos').get(clipId).onsuccess=e=>{
+      res((e.target.result && e.target.result.annos) || []);
+    };
   });
 }
 
-/* ==========================
-   Capture (back camera only)
-========================== */
-function showErr(msg){
-  els.errBox.style.display='block';
-  els.errBox.textContent = msg;
-}
-function clearErr(){
-  els.errBox.style.display='none';
-  els.errBox.textContent='';
-}
-function stopTracks(s){ if(!s) return; s.getTracks().forEach(t=>t.stop()); }
-function parseRes(v){ const [w,h]=v.split('x').map(Number); return {width:w,height:h}; }
-
+/* ======== Capture (back camera only) ======== */
 async function startPreview(){
   clearErr();
+  const {width,height}=parseRes(targetRes);
+  const fps=targetFPS;
   try{
-    const {width,height} = parseRes(els.resolution.value);
-    const frameTarget = Number(els.fps.value);
     if(stream) stopTracks(stream);
-
-    // Hard prefer BACK camera (environment). Some devices require 'exact', others reject it;
-    // we try exact first, then fallback to ideal.
-    const videoExact = {
-      facingMode: { exact: 'environment' },
-      width: { ideal: width },
-      height: { ideal: height },
-      frameRate: { ideal: frameTarget, max: frameTarget }
-    };
-    const videoIdeal = {
-      facingMode: { ideal: 'environment' },
-      width: { ideal: width },
-      height: { ideal: height },
-      frameRate: { ideal: frameTarget, max: frameTarget }
-    };
-
+    const exact = { facingMode:{ exact:'environment' }, width:{ideal:width}, height:{ideal:height}, frameRate:{ideal:fps, max:fps} };
+    const ideal = { facingMode:{ ideal:'environment' }, width:{ideal:width}, height:{ideal:height}, frameRate:{ideal:fps, max:fps} };
     try{
-      stream = await navigator.mediaDevices.getUserMedia({ audio:false, video: videoExact });
+      stream = await navigator.mediaDevices.getUserMedia({ audio:false, video: exact });
     }catch{
-      stream = await navigator.mediaDevices.getUserMedia({ audio:false, video: videoIdeal });
+      stream = await navigator.mediaDevices.getUserMedia({ audio:false, video: ideal });
     }
-
-    els.preview.srcObject = stream;
-    await els.preview.play().catch(()=>{});
-    els.status.textContent='Previewing';
-    els.startRec.disabled=false;
+    els.preview.srcObject = stream; await els.preview.play().catch(()=>{});
+    els.status.textContent='Previewing'; els.startRec.disabled=false;
   }catch(e){
-    console.error(e);
-    showErr('Camera failed to start (back camera). ' + (e.message || e));
+    showErr('Camera failed to start (back camera): ' + (e.message||e));
   }
 }
-function stopPreview(){
-  if(stream){ stopTracks(stream); stream=null; }
-  els.preview.srcObject=null;
-  els.startRec.disabled=true;
-  els.status.textContent='Idle';
-}
-
+function stopPreview(){ if(stream){ stopTracks(stream); stream=null; } els.preview.srcObject=null; els.startRec.disabled=true; els.status.textContent='Idle'; }
 function supportedMime(){
-  const candidates = [
-    'video/mp4;codecs="avc1.42E01E, mp4a.40.2"',
-    'video/mp4',
-    'video/webm;codecs=vp9,opus',
-    'video/webm;codecs=vp8,opus'
-  ];
-  return candidates.find(t=>window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
+  const c=['video/mp4;codecs="avc1.42E01E, mp4a.40.2"','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus'];
+  return c.find(t=>window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
 }
-function startTimer(){
-  recStart = Date.now();
-  els.timer.textContent='00:00';
-  timerInt = setInterval(()=>{
-    const s = Math.floor((Date.now()-recStart)/1000);
-    const mm=String(Math.floor(s/60)).padStart(2,'0');
-    const ss=String(s%60).padStart(2,'0');
-    els.timer.textContent=`${mm}:${ss}`;
-  },250);
-}
+function startTimer(){ recStart=Date.now(); els.timer.textContent='00:00'; timerInt=setInterval(()=>{const s=Math.floor((Date.now()-recStart)/1000); els.timer.textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;},250); }
 function stopTimer(){ clearInterval(timerInt); timerInt=null; }
 
-function startRec(){
-  if(!stream){ showErr('No camera stream. Tap Start Camera first.'); return; }
-  clearErr();
-  const type = supportedMime();
-  if(!window.MediaRecorder){ showErr('MediaRecorder not supported on this browser/iOS version.'); return; }
+function snapshotFromVideo(v){
   try{
-    chunks=[];
-    mediaRecorder = new MediaRecorder(stream, type ? { mimeType:type } : undefined);
-  }catch(e){
-    showErr('Recorder init failed: ' + (e.message||e));
-    return;
-  }
-  mediaRecorder.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
-  mediaRecorder.onstop = async ()=>{
-    const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'video/mp4' });
-    currentBlob = blob;
-    const url = URL.createObjectURL(blob);
-    els.playback.src = url;
-    els.playback.load();
-    els.download.disabled=false;
-    els.resetClip.disabled=false;
-    els.status.textContent='Recorded';
+    const c=document.createElement('canvas'); const w=160, h=Math.max(1, Math.round((v.videoHeight/v.videoWidth)*160));
+    c.width=w; c.height=h; const cx=c.getContext('2d'); cx.drawImage(v,0,0,w,h); return c.toDataURL('image/jpeg', .8);
+  }catch{ return null; }
+}
 
-    // Save to library under current player
-    const profile = els.playerSelect.value;
-    const id = await saveClip(profile, blob, (blob.type||'video/mp4'));
-    currentClip = { id, profile, createdAt: Date.now(), type: blob.type||'video/mp4' };
-    annotations = [];
-    await saveAnnotations(id, annotations);
-    refreshLibrary();
+function startRec(){
+  if(!stream) return showErr('No camera stream. Tap Start Camera first.');
+  clearErr();
+  const type=supportedMime(); if(!window.MediaRecorder) return showErr('MediaRecorder not supported on this browser/iOS.');
+  try{ chunks=[]; mediaRecorder=new MediaRecorder(stream, type?{mimeType:type}:undefined); }
+  catch(e){ return showErr('Recorder init failed: '+(e.message||e)); }
+  mediaRecorder.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+  mediaRecorder.onstop=async ()=>{
+    const blob=new Blob(chunks,{type:mediaRecorder.mimeType || 'video/mp4'}); currentBlob=blob;
+    const url=URL.createObjectURL(blob); els.playback.src=url; els.playback.load(); els.download.disabled=false; els.resetClip.disabled=false; els.status.textContent='Recorded';
+    // save clip + thumbnail
+    const profile=els.playerSelect.value, type=blob.type||'video/mp4'; const thumb=snapshotFromVideo(els.preview);
+    const id = await saveClip(profile, blob, type, thumb); currentClip={ id, profile, createdAt:Date.now(), type };
+    annotations=[]; await saveAnnotations(id, annotations); refreshLibrary(); toast('Clip saved');
   };
-  mediaRecorder.start();
-  els.status.textContent='Recording';
-  els.startRec.disabled=true;
-  els.stopRec.disabled=false;
-  startTimer();
+  mediaRecorder.start(); els.status.textContent='Recording'; els.startRec.disabled=true; els.stopRec.disabled=false; startTimer();
 }
-function stopRec(){
-  if(mediaRecorder && mediaRecorder.state!=='inactive'){ mediaRecorder.stop(); }
-  els.stopRec.disabled=true;
-  stopTimer();
-  els.startRec.disabled=false;
-}
+function stopRec(){ if(mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop(); els.stopRec.disabled=true; stopTimer(); els.startRec.disabled=false; }
 
-/* ==========================
-   Playback controls
-========================== */
+/* ======== Playback ======== */
 function stepFrame(dir=1){
-  const v=els.playback;
-  const fps = 60; // conservative fallback
-  const dt = 1/fps;
-  v.pause();
-  v.currentTime = Math.min(Math.max(0, v.currentTime + dir*dt), v.duration || 0);
+  const v=els.playback, fps=60, dt=1/fps; v.pause(); v.currentTime=Math.min(Math.max(0, v.currentTime + dir*dt), v.duration || 0);
 }
 
-/* ==========================
-   Library UI
-========================== */
+/* ======== Library UI ======== */
 async function refreshLibrary(){
-  const prof = els.playerSelect.value;
-  const rows = await listClips(prof);
+  const prof=els.playerSelect.value; const rows=await listClips(prof);
   els.libBody.innerHTML='';
-  if(rows.length===0){
-    const tr=document.createElement('tr');
-    tr.innerHTML='<td colspan="3" style="opacity:.7;">No clips yet.</td>';
-    els.libBody.appendChild(tr);
-    return;
-  }
+  if(rows.length===0){ els.libBody.innerHTML='<tr><td colspan="3" class="subtle" style="padding:8px 0">No clips yet.</td></tr>'; return; }
   for(const r of rows){
     const tr=document.createElement('tr');
-    const stamp = new Date(r.createdAt||Date.now()).toLocaleString();
+    const when=new Date(r.createdAt||Date.now()).toLocaleString();
+    const thumb = r.thumb ? `<img class="thumb" src="${r.thumb}">` : `<div class="thumb" style="display:grid;place-items:center;color:#888">🥎</div>`;
     tr.innerHTML = `
-      <td>#${r.id} <span class="tag">${(r.type||'mp4').replace('video/','')}</span></td>
-      <td>${stamp}</td>
-      <td>
-        <button data-load="${r.id}">Load</button>
-        <button data-del="${r.id}" class="danger">Delete</button>
+      <td style="display:flex; align-items:center; gap:10px">${thumb}
+        <div>
+          <div>#${r.id} <span class="tag">${(r.type||'mp4').replace('video/','')}</span></div>
+          <div class="subtle">${prof}</div>
+        </div>
+      </td>
+      <td>${when}</td>
+      <td style="text-align:right">
+        <button data-load="${r.id}" class="btn">Load</button>
+        <button data-del="${r.id}" class="btn danger">Delete</button>
       </td>`;
     els.libBody.appendChild(tr);
   }
-  // wire buttons
-  els.libBody.querySelectorAll('button[data-load]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id = Number(btn.dataset.load);
-      const rec = await getClip(id);
-      if(!rec || !rec.blob){ alert('Clip data missing'); return; }
-      currentClip = { id, profile: rec.profile, createdAt: rec.createdAt, type: rec.type||'video/mp4' };
-      const url = URL.createObjectURL(rec.blob);
-      els.playback.src = url;
-      els.playback.load();
-      els.download.disabled=false;
-      els.resetClip.disabled=false;
-      annotations = await loadAnnotations(id);
-      redrawOverlay(); // draw static annos
-    });
-  });
-  els.libBody.querySelectorAll('button[data-del]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id = Number(btn.dataset.del);
-      if(!confirm('Delete clip #' + id + ' ?')) return;
-      await deleteClip(id);
-      if(currentClip && currentClip.id===id){
-        clearCurrentClip();
-      }
-      refreshLibrary();
-    });
-  });
+  els.libBody.querySelectorAll('[data-load]').forEach(b=>b.addEventListener('click', async ()=>{
+    const id=Number(b.dataset.load); const rec=(await getClip(id)).result || (await getClip(id));
+    if(!rec || !rec.blob){ alert('Clip data missing'); return; }
+    currentClip={ id, profile:rec.profile, createdAt:rec.createdAt, type:rec.type||'video/mp4' };
+    const url=URL.createObjectURL(rec.blob); els.playback.src=url; els.playback.load(); els.download.disabled=false; els.resetClip.disabled=false;
+    annotations = await loadAnnotations(id); redrawOverlay(); toast('Clip loaded');
+  }));
+  els.libBody.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', async ()=>{
+    const id=Number(b.dataset.del); if(!confirm('Delete clip #'+id+'?')) return;
+    await deleteClip(id); if(currentClip && currentClip.id===id){ clearCurrentClip(); }
+    refreshLibrary(); toast('Deleted');
+  }));
 }
 function clearCurrentClip(){
-  els.playback.removeAttribute('src'); els.playback.load();
-  els.download.disabled=true; els.resetClip.disabled=true; currentBlob=null; currentClip=null;
-  annotations=[]; redrawOverlay();
+  els.playback.removeAttribute('src'); els.playback.load(); els.download.disabled=true; els.resetClip.disabled=true; currentBlob=null; currentClip=null; annotations=[]; redrawOverlay();
 }
-
-/* ==========================
-   Downloads / Clear
-========================== */
 els.download.addEventListener('click', async ()=>{
   if(currentClip){
-    const rec = await getClip(currentClip.id);
-    if(rec && rec.blob){
-      const a=document.createElement('a');
-      const stamp=new Date().toISOString().replace(/[:.]/g,'-');
-      const ext=(rec.type||'video/mp4').includes('webm')?'webm':'mp4';
-      a.href=URL.createObjectURL(rec.blob);
-      a.download=`swing-${currentClip.id}-${stamp}.${ext}`;
-      document.body.appendChild(a); a.click(); a.remove();
-    }
-  }else if(currentBlob){
-    const a=document.createElement('a');
-    const stamp=new Date().toISOString().replace(/[:.]/g,'-');
-    const ext=(currentBlob.type||'video/mp4').includes('webm')?'webm':'mp4';
-    a.href=URL.createObjectURL(currentBlob);
-    a.download=`swing-${stamp}.${ext}`;
-    document.body.appendChild(a); a.click(); a.remove();
-  }
+    const rec=(await getClip(currentClip.id)).result || (await getClip(currentClip.id));
+    if(rec && rec.blob){ const a=document.createElement('a'); const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+      const ext=(rec.type||'video/mp4').includes('webm')?'webm':'mp4'; a.href=URL.createObjectURL(rec.blob); a.download=`swing-${currentClip.id}-${stamp}.${ext}`;
+      document.body.appendChild(a); a.click(); a.remove(); }
+  }else if(currentBlob){ const a=document.createElement('a'); const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+    const ext=(currentBlob.type||'video/mp4').includes('webm')?'webm':'mp4'; a.href=URL.createObjectURL(currentBlob); a.download=`swing-${stamp}.${ext}`; document.body.appendChild(a); a.click(); a.remove(); }
 });
 els.resetClip.addEventListener('click', clearCurrentClip);
 
-/* ==========================
-   Fallback file input
-========================== */
+/* ======== Fallback upload ======== */
 els.filePicker.addEventListener('change', async ()=>{
-  const f = els.filePicker.files?.[0];
-  if(!f) return;
-  const url = URL.createObjectURL(f);
-  els.playback.src = url; els.playback.load();
-  els.download.disabled=false; els.resetClip.disabled=false;
-  const profile = els.playerSelect.value;
-  const id = await saveClip(profile, f, f.type || 'video/mp4');
-  currentClip = { id, profile, createdAt: Date.now(), type: f.type||'video/mp4' };
-  annotations = [];
-  await saveAnnotations(id, annotations);
-  refreshLibrary();
+  const f=els.filePicker.files?.[0]; if(!f) return;
+  const url=URL.createObjectURL(f); els.playback.src=url; els.playback.load(); els.download.disabled=false; els.resetClip.disabled=false;
+  const profile=els.playerSelect.value; const thumb=await generateThumbFromVideo(url);
+  const id=await saveClip(profile, f, f.type||'video/mp4', thumb); currentClip={ id, profile, createdAt:Date.now(), type:f.type||'video/mp4' };
+  annotations=[]; await saveAnnotations(id, annotations); refreshLibrary(); toast('Clip saved');
 });
+function generateThumbFromVideo(src){
+  return new Promise(resolve=>{
+    const v=document.createElement('video'); v.muted=true; v.src=src; v.playsInline=true; v.currentTime=0.05;
+    v.onloadeddata=()=>{ resolve(snapshotFromVideo(v)); };
+    v.onerror=()=>resolve(null);
+  });
+}
 
-/* ==========================
-   Annotation layer (canvas)
-========================== */
-function setTool(t){
-  currentTool = t;
-  // toggle active class
-  els.toolBar.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active', b.dataset.tool===t));
+/* ======== Annotations ======== */
+function setTool(t){ currentTool=t; setSegmentActive(els.toolSeg, els.toolSeg.querySelector(`[data-tool="${t}"]`)); }
+function videoRect(){
+  const v=els.playback; const b=v.getBoundingClientRect(); const vw=v.videoWidth||0, vh=v.videoHeight||0;
+  if(!vw || !vh) return { x:0, y:0, w:b.width, h:b.height };
+  const s=Math.min(b.width/vw, b.height/vh); const w=vw*s, h=vh*s; const x=(b.width-w)/2, y=(b.height-h)/2;
+  return { x,y,w,h, vw,vh };
 }
-setTool('line');
-els.toolBar.querySelectorAll('.tool').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.tool)));
-
-function videoRect(){ // get drawing rect of the video inside its element (object-fit: contain)
-  const v = els.playback;
-  const bounds = v.getBoundingClientRect();
-  const vw = v.videoWidth || 0, vh = v.videoHeight || 0;
-  if(!vw || !vh) return { x:0, y:0, w:bounds.width, h:bounds.height };
-  const scale = Math.min(bounds.width/vw, bounds.height/vh);
-  const w = vw*scale, h = vh*scale;
-  const x = (bounds.width - w)/2;
-  const y = (bounds.height - h)/2;
-  return { x, y, w, h, scale, vw, vh };
+function normPoint(cx, cy){
+  const r=els.playback.getBoundingClientRect(); const vr=videoRect(); const x=cx-r.left-vr.x, y=cy-r.top-vr.y;
+  return { nx: Math.max(0,Math.min(1,x/vr.w)), ny: Math.max(0,Math.min(1,y/vr.h)) };
 }
-function normPoint(clientX, clientY){
-  const rect = els.playback.getBoundingClientRect();
-  const vr = videoRect();
-  const x = clientX - rect.left - vr.x;
-  const y = clientY - rect.top - vr.y;
-  // normalize to [0..1] in video space
-  return { nx: Math.max(0, Math.min(1, x / vr.w)), ny: Math.max(0, Math.min(1, y / vr.h)) };
-}
-function denormPoint(nx, ny){
-  const vr = videoRect();
-  return { x: vr.x + nx*vr.w, y: vr.y + ny*vr.h };
-}
+function denormPoint(nx, ny){ const vr=videoRect(); return { x: vr.x + nx*vr.w, y: vr.y + ny*vr.h }; }
 function resizeOverlay(){
-  const r = els.playback.getBoundingClientRect();
-  els.overlay.width = r.width * devicePixelRatio;
-  els.overlay.height = r.height * devicePixelRatio;
-  els.overlay.style.width = r.width + 'px';
-  els.overlay.style.height = r.height + 'px';
-  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
-  redrawOverlay();
+  const r=els.playback.getBoundingClientRect();
+  els.overlay.width = r.width * devicePixelRatio; els.overlay.height = r.height * devicePixelRatio;
+  els.overlay.style.width=r.width+'px'; els.overlay.style.height=r.height+'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); redrawOverlay();
 }
-window.addEventListener('resize', resizeOverlay);
-els.playback.addEventListener('loadedmetadata', resizeOverlay);
+window.addEventListener('resize', resizeOverlay); els.playback.addEventListener('loadedmetadata', resizeOverlay);
 
 function redrawOverlay(){
-  const r = els.overlay.getBoundingClientRect();
-  ctx.clearRect(0,0, r.width, r.height);
-  const color = els.annoColor.value;
+  const r=els.overlay.getBoundingClientRect(); ctx.clearRect(0,0,r.width,r.height);
   annotations.forEach(a=>{
-    ctx.strokeStyle = a.color || color;
-    ctx.fillStyle = a.color || color;
-    ctx.lineWidth = a.thick || 3;
+    ctx.strokeStyle=a.color||els.annoColor.value; ctx.fillStyle=ctx.strokeStyle; ctx.lineWidth=a.thick||3;
     if(a.type==='line'){
-      const p1=denormPoint(a.data.x1, a.data.y1);
-      const p2=denormPoint(a.data.x2, a.data.y2);
-      ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+      const p1=denormPoint(a.data.x1,a.data.y1), p2=denormPoint(a.data.x2,a.data.y2);
+      ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
     }else if(a.type==='circle'){
-      const c=denormPoint(a.data.cx, a.data.cy);
-      const edge=denormPoint(a.data.cx + a.data.r, a.data.cy);
-      const radius = Math.hypot(edge.x-c.x, edge.y-c.y);
-      ctx.beginPath(); ctx.arc(c.x, c.y, radius, 0, Math.PI*2); ctx.stroke();
+      const c=denormPoint(a.data.cx,a.data.cy), edge=denormPoint(a.data.cx+a.data.r,a.data.cy);
+      const rad=Math.hypot(edge.x-c.x, edge.y-c.y); ctx.beginPath(); ctx.arc(c.x,c.y,rad,0,Math.PI*2); ctx.stroke();
     }else if(a.type==='text'){
-      const p=denormPoint(a.data.x, a.data.y);
-      ctx.font = `${(a.thick||3)*5 + 10}px sans-serif`;
-      ctx.fillText(a.data.text || 'Note', p.x, p.y);
+      const p=denormPoint(a.data.x,a.data.y); ctx.font=`${(a.thick||3)*5+10}px ui-sans-serif`; ctx.fillText(a.data.text||'Note', p.x, p.y);
     }
   });
 }
 
-let drag = null; // {start:{nx,ny}, live:{...}, type,...}
-function pointerDown(ev){
-  if(!currentClip) return; // only annotate saved/loaded clips
-  const pt = (ev.touches?.[0]) || ev;
-  const { nx, ny } = normPoint(pt.clientX, pt.clientY);
-  drag = { type: currentTool, start:{nx,ny}, color: els.annoColor.value, thick: Number(els.annoThick.value) };
+let drag=null;
+function down(ev){
+  if(!currentClip) return;
+  const pt=(ev.touches?.[0])||ev; const {nx,ny}=normPoint(pt.clientX, pt.clientY);
+  drag={ type:currentTool, start:{nx,ny}, color:els.annoColor.value, thick:Number(els.annoThick.value) };
   if(currentTool==='text'){
-    const text = prompt('Note text');
-    if(text){
-      annotations.push({ type:'text', color: drag.color, thick: drag.thick, data:{ x:nx, y:ny, text } });
-      redrawOverlay();
-    }
-    drag = null;
+    const text=prompt('Note'); if(text){ annotations.push({ type:'text', color:drag.color, thick:drag.thick, data:{ x:nx, y:ny, text } }); redrawOverlay(); toast('Text added'); }
+    drag=null;
   }
 }
-function pointerMove(ev){
+function move(ev){
   if(!drag) return;
-  const pt = (ev.touches?.[0]) || ev;
-  const { nx, ny } = normPoint(pt.clientX, pt.clientY);
-  drag.live = { nx, ny };
-  // live preview: redraw all + current ghost
-  redrawOverlay();
-  ctx.strokeStyle = drag.color; ctx.lineWidth = drag.thick; ctx.fillStyle = drag.color;
-  if(drag.type==='line'){
-    const p1=denormPoint(drag.start.nx, drag.start.ny);
-    const p2=denormPoint(nx, ny);
-    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-  }else if(drag.type==='circle'){
-    const c=denormPoint(drag.start.nx, drag.start.ny);
-    const edge=denormPoint(nx, ny);
-    const r=Math.hypot(edge.x-c.x, edge.y-c.y);
-    ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI*2); ctx.stroke();
-  }
+  const pt=(ev.touches?.[0])||ev; const {nx,ny}=normPoint(pt.clientX, pt.clientY); drag.live={nx,ny};
+  redrawOverlay(); ctx.strokeStyle=drag.color; ctx.lineWidth=drag.thick; ctx.fillStyle=drag.color;
+  if(drag.type==='line'){ const p1=denormPoint(drag.start.nx,drag.start.ny), p2=denormPoint(nx,ny); ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); }
+  if(drag.type==='circle'){ const c=denormPoint(drag.start.nx,drag.start.ny), e=denormPoint(nx,ny); const r=Math.hypot(e.x-c.x,e.y-c.y); ctx.beginPath(); ctx.arc(c.x,c.y,r,0,Math.PI*2); ctx.stroke(); }
 }
-function pointerUp(){
+function up(){
   if(!drag) return;
-  if(drag.type==='line' && drag.live){
-    annotations.push({ type:'line', color: drag.color, thick: drag.thick, data:{ x1:drag.start.nx, y1:drag.start.ny, x2:drag.live.nx, y2:drag.live.ny } });
-  }else if(drag.type==='circle' && drag.live){
-    const r = Math.hypot(drag.live.nx-drag.start.nx, drag.live.ny-drag.start.ny);
-    annotations.push({ type:'circle', color: drag.color, thick: drag.thick, data:{ cx:drag.start.nx, cy:drag.start.ny, r } });
-  }
+  if(drag.type==='line' && drag.live){ annotations.push({ type:'line', color:drag.color, thick:drag.thick, data:{ x1:drag.start.nx, y1:drag.start.ny, x2:drag.live.nx, y2:drag.live.ny } }); toast('Line added'); }
+  if(drag.type==='circle' && drag.live){ const r=Math.hypot(drag.live.nx-drag.start.nx, drag.live.ny-drag.start.ny);
+    annotations.push({ type:'circle', color:drag.color, thick:drag.thick, data:{ cx:drag.start.nx, cy:drag.start.ny, r } }); toast('Circle added'); }
   drag=null; redrawOverlay();
 }
-['pointerdown','touchstart'].forEach(e=>els.overlay.addEventListener(e, pointerDown, {passive:false}));
-['pointermove','touchmove'].forEach(e=>els.overlay.addEventListener(e, pointerMove, {passive:false}));
-['pointerup','pointercancel','touchend','touchcancel'].forEach(e=>els.overlay.addEventListener(e, pointerUp, {passive:false}));
+['pointerdown','touchstart'].forEach(e=>els.overlay.addEventListener(e,down,{passive:false}));
+['pointermove','touchmove'].forEach(e=>els.overlay.addEventListener(e,move,{passive:false}));
+['pointerup','pointercancel','touchend','touchcancel'].forEach(e=>els.overlay.addEventListener(e,up,{passive:false}));
 
-els.undoAnno.addEventListener('click', ()=>{ annotations.pop(); redrawOverlay(); });
-els.saveAnno.addEventListener('click', async ()=>{
-  if(!currentClip){ alert('Load or record a clip first.'); return; }
-  await saveAnnotations(currentClip.id, annotations);
-  alert('Annotations saved');
-});
+els.undoAnno.addEventListener('click', ()=>{ annotations.pop(); redrawOverlay(); toast('Undo'); });
+els.saveAnno.addEventListener('click', async ()=>{ if(!currentClip) return alert('Load or record a clip first.'); await saveAnnotations(currentClip.id, annotations); toast('Annotations saved'); });
 
-/* ==========================
-   Events / init
-========================== */
+/* ======== Events & init ======== */
 els.startPreview.addEventListener('click', startPreview);
 els.stopPreview.addEventListener('click', stopPreview);
 els.startRec.addEventListener('click', startRec);
 els.stopRec.addEventListener('click', stopRec);
-
-els.rateBtns.forEach(b=>b.addEventListener('click', ()=>{ els.playback.playbackRate=Number(b.dataset.rate); els.playback.play(); }));
 els.stepBack.addEventListener('click', ()=>stepFrame(-1));
 els.stepFwd.addEventListener('click', ()=>stepFrame(1));
 
-function secureCheck(){
-  const secure = location.protocol==='https:' || location.hostname==='localhost' || location.hostname.endsWith('.local');
-  if(!secure){ els.httpsWarn.style.display='block'; }
-}
+els.speedSeg.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
+  els.playback.playbackRate = Number(b.dataset.rate); els.playback.play();
+  setSegmentActive(els.speedSeg, b);
+}));
+els.toolSeg.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>setTool(b.dataset.tool)));
+
+document.querySelectorAll('[data-fps]').forEach(b=>b.addEventListener('click', ()=>{ targetFPS=Number(b.dataset.fps); setSegmentActive(b.parentElement,b); toast(`FPS ${targetFPS}`); }));
+document.querySelectorAll('[data-res]').forEach(b=>b.addEventListener('click', ()=>{ targetRes=b.dataset.res; setSegmentActive(b.parentElement,b); toast(`${targetRes}`); }));
+
+function secureCheck(){ const ok = location.protocol==='https:' || location.hostname==='localhost' || location.hostname.endsWith('.local'); els.httpsWarn.style.display = ok ? 'none' : 'block'; }
 
 (async function init(){
   secureCheck();
-  ensurePlayerSelect();
   await openDB();
+  renderProfiles();
   refreshLibrary();
-  // Initial overlay size
+  setTool('line');
   resizeOverlay();
 })();
 </script>

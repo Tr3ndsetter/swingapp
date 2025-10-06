@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#0b0b0c">
 <title>Softball Swing Capture</title>
 <style>
@@ -13,6 +14,8 @@
   }
   *{ box-sizing:border-box; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial }
   html,body{ height:100% }
+  /* Disable double-tap zoom & reduce accidental gestures */
+  html,body{ touch-action: manipulation; -webkit-text-size-adjust: 100%; overscroll-behavior: contain; }
   body{ margin:0; background:linear-gradient(180deg,#0b0b0c 0%, #0d0d12 100%); color:var(--text) }
   .container{ max-width:1200px; margin:0 auto; padding:16px; }
 
@@ -26,7 +29,7 @@
     border-radius:999px; box-shadow: var(--shadow); }
   select, input[type="text"], input[type="number"], button, input[type="file"]{
     color:var(--text); background:var(--panel-2); border:1px solid var(--stroke); border-radius:10px; padding:10px 12px;
-    transition: all .15s ease; outline:none;
+    transition: all .15s ease; outline:none; -webkit-tap-highlight-color: transparent;
   }
   select:focus, input:focus, button:focus{ box-shadow:0 0 0 2px var(--ring); border-color:transparent }
   button{ cursor:pointer }
@@ -202,7 +205,12 @@
 <div class="toast" id="toast"></div>
 
 <script>
-/* ======== Small helpers & state ======== */
+/* ===== Disable double-tap & pinch zoom (extra guard for iOS Safari) ===== */
+let _lastTouchEnd = 0;
+document.addEventListener('touchend', (e)=>{ const now=Date.now(); if(now - _lastTouchEnd <= 300){ e.preventDefault(); } _lastTouchEnd = now; }, {passive:false});
+document.addEventListener('gesturestart', (e)=>e.preventDefault(), {passive:false});
+
+/* ===== Small helpers & state ===== */
 const $ = id => document.getElementById(id);
 const els = {
   httpsWarn: $('httpsWarn'),
@@ -233,7 +241,7 @@ function stopTracks(s){ if(!s) return; s.getTracks().forEach(t=>t.stop()); }
 function parseRes(v){ const [w,h]=v.split('x').map(Number); return {width:w,height:h}; }
 function setSegmentActive(segEl, btn){ segEl.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b===btn)); }
 
-/* ======== Profiles (localStorage) ======== */
+/* ===== Profiles (localStorage) ===== */
 function loadProfiles(){ return JSON.parse(localStorage.getItem('swing_profiles')||'["Player 1"]'); }
 function saveProfiles(arr){ localStorage.setItem('swing_profiles', JSON.stringify(arr)); }
 function renderProfiles(){
@@ -247,7 +255,7 @@ els.addPlayer.addEventListener('click', ()=>{
 });
 els.playerSelect.addEventListener('change', ()=>{ els.libPlayerTag.textContent=els.playerSelect.value; refreshLibrary(); });
 
-/* ======== IndexedDB (clips + thumbs + annos) ======== */
+/* ===== IndexedDB (clips + thumbs + annos) ===== */
 const DB='swingdb', VER=2; let db=null;
 function openDB(){
   return new Promise((res,rej)=>{
@@ -310,7 +318,7 @@ function loadAnnotations(clipId){
   });
 }
 
-/* ======== Capture (back camera only) ======== */
+/* ===== Capture (back camera only) ===== */
 async function startPreview(){
   clearErr();
   const {width,height}=parseRes(targetRes);
@@ -324,10 +332,11 @@ async function startPreview(){
     }catch{
       stream = await navigator.mediaDevices.getUserMedia({ audio:false, video: ideal });
     }
-    els.preview.srcObject = stream; await els.preview.play().catch(()=>{});
-    els.status.textContent='Previewing'; els.startRec.disabled=true; // enable after play starts
-    // Small delay to ensure play kicked in (iOS quirk)
-    setTimeout(()=>{ if (stream) els.startRec.disabled=false; }, 200);
+    els.preview.srcObject = stream;
+    await els.preview.play().catch(()=>{});
+    els.status.textContent='Previewing';
+    els.startRec.disabled=true;
+    setTimeout(()=>{ if (stream) els.startRec.disabled=false; }, 200); // iOS quirk
   }catch(e){
     showErr('Camera failed to start (back camera): ' + (e.message||e));
   }
@@ -365,12 +374,12 @@ function startRec(){
 }
 function stopRec(){ if(mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop(); els.stopRec.disabled=true; stopTimer(); els.startRec.disabled=false; }
 
-/* ======== Playback ======== */
+/* ===== Playback ===== */
 function stepFrame(dir=1){
   const v=els.playback, fps=60, dt=1/fps; v.pause(); v.currentTime=Math.min(Math.max(0, v.currentTime + dir*dt), v.duration || 0);
 }
 
-/* ======== Library UI ======== */
+/* ===== Library UI ===== */
 async function refreshLibrary(){
   const prof=els.playerSelect.value; const rows=await listClips(prof);
   els.libBody.innerHTML='';
@@ -398,7 +407,7 @@ async function refreshLibrary(){
     if(!rec || !rec.blob){ alert('Clip data missing'); return; }
     currentClip={ id, profile:rec.profile, createdAt:rec.createdAt, type:rec.type||'video/mp4' };
     const url=URL.createObjectURL(rec.blob); els.playback.src=url; els.playback.load(); els.download.disabled=false; els.resetClip.disabled=false;
-    annotations = await loadAnnotations(id); redrawOverlay(); toast('Clip loaded');
+    annotations = await loadAnnotations(id); redrawOverlay(); toast('Clip loaded'); setTool('none');
   }));
   els.libBody.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', async ()=>{
     const id=Number(b.dataset.del); if(!confirm('Delete clip #'+id+'?')) return;
@@ -420,13 +429,13 @@ els.download.addEventListener('click', async ()=>{
 });
 els.resetClip.addEventListener('click', clearCurrentClip);
 
-/* ======== Fallback upload ======== */
+/* ===== Fallback upload ===== */
 els.filePicker.addEventListener('change', async ()=>{
   const f=els.filePicker.files?.[0]; if(!f) return;
   const url=URL.createObjectURL(f); els.playback.src=url; els.playback.load(); els.download.disabled=false; els.resetClip.disabled=false;
   const profile=els.playerSelect.value; const thumb=await generateThumbFromVideo(url);
   const id=await saveClip(profile, f, f.type||'video/mp4', thumb); currentClip={ id, profile, createdAt:Date.now(), type:f.type||'video/mp4' };
-  annotations=[]; await saveAnnotations(id, annotations); refreshLibrary(); toast('Clip saved');
+  annotations=[]; await saveAnnotations(id, annotations); refreshLibrary(); toast('Clip saved'); setTool('none');
 });
 function generateThumbFromVideo(src){
   return new Promise(resolve=>{
@@ -436,7 +445,7 @@ function generateThumbFromVideo(src){
   });
 }
 
-/* ======== Annotations (Play mode + tools) ======== */
+/* ===== Annotations (Play mode + tools) ===== */
 function setTool(t){
   if (currentTool === t && t !== 'none') t = 'none'; // tapping same tool toggles back to Play
   currentTool = t;
@@ -464,8 +473,8 @@ function resizeOverlay(){
 }
 window.addEventListener('resize', resizeOverlay); els.playback.addEventListener('loadedmetadata', resizeOverlay);
 
-// Always keep annotations visible during playback; redraw on common video events
-['play','pause','timeupdate','seeking','seeked','ratechange','loadedmetadata'].forEach(ev =>
+// Keep annotations visible during playback; redraw on common video events
+['play','pause','timeupdate','seeking','seeked','ratechange','loadedmetadata','emptied'].forEach(ev =>
   els.playback.addEventListener(ev, redrawOverlay)
 );
 
@@ -517,7 +526,7 @@ function up(){
 els.undoAnno.addEventListener('click', ()=>{ annotations.pop(); redrawOverlay(); toast('Undo'); });
 els.saveAnno.addEventListener('click', async ()=>{ if(!currentClip) return alert('Load or record a clip first.'); await saveAnnotations(currentClip.id, annotations); toast('Annotations saved'); });
 
-/* ======== Events & init ======== */
+/* ===== Controls & init ===== */
 els.startPreview.addEventListener('click', startPreview);
 els.stopPreview.addEventListener('click', stopPreview);
 els.startRec.addEventListener('click', startRec);

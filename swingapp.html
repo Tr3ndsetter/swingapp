@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Softball Swing Capture (Web)</title>
+<style>
+  :root { --gap: 12px; --pad: 14px; --radius: 14px; }
+  *{ box-sizing:border-box; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; }
+  body{ margin:0; background:#0b0b0c; color:#eaeaea; }
+  header{ padding:var(--pad); border-bottom:1px solid #222; position:sticky; top:0; background:#0b0b0c; z-index:5; }
+  h1{ font-size:18px; margin:0; }
+  .wrap{ padding:var(--pad); display:grid; gap:var(--gap); max-width:900px; margin:0 auto; }
+  .card{ background:#121214; border:1px solid #1f1f22; border-radius:var(--radius); padding:var(--pad); }
+  .row{ display:flex; flex-wrap:wrap; gap:var(--gap); align-items:center; }
+  select,button,input[type="file"]{ background:#1a1a1f; color:#eaeaea; border:1px solid #2a2a31; border-radius:10px; padding:10px 12px; }
+  button{ cursor:pointer; } button.primary{ background:#2a62ff; border-color:#2a62ff; } button.danger{ background:#ff2a4a; border-color:#ff2a4a; } button:disabled{ opacity:.5; cursor:not-allowed; }
+  video{ width:100%; border-radius:var(--radius); background:black; max-height:70vh; object-fit:contain; }
+  .pill{ padding:4px 8px; border:1px solid #2a2a31; border-radius:999px; font-size:12px; }
+  .warn{ background:#3b2a00; border:1px solid #644400; color:#ffd58a; padding:10px 12px; border-radius:10px; }
+  .hint{ font-size:12px; opacity:.85; }
+</style>
+</head>
+<body>
+<header><h1>Softball Swing Capture (Web)</h1></header>
+
+<main class="wrap">
+  <div id="httpsWarn" class="warn" style="display:none">
+    This page isn’t on <b>HTTPS</b>. iOS blocks camera on non-secure pages. Host on https (Vercel/Netlify/GitHub Pages) or use localhost.
+  </div>
+
+  <section class="card">
+    <div class="row" style="justify-content:space-between; gap:16px; align-items:flex-end;">
+      <div style="min-width:200px;">
+        <label>Camera</label><br/>
+        <select id="cameraSelect" disabled><option>Allow camera to list devices…</option></select>
+      </div>
+      <div style="min-width:160px;">
+        <label>Resolution</label><br/>
+        <select id="resolution">
+          <option value="1920x1080">1080p (ideal)</option>
+          <option value="1280x720">720p</option>
+          <option value="640x480">480p</option>
+        </select>
+      </div>
+      <div style="min-width:160px;">
+        <label>Target FPS</label><br/>
+        <select id="fps">
+          <option value="240">240 (try)</option>
+          <option value="120">120 (try)</option>
+          <option value="60" selected>60 (reliable)</option>
+          <option value="30">30</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="startPreview" class="primary">Start Camera</button>
+        <button id="stopPreview">Stop Camera</button>
+      </div>
+    </div>
+
+    <div class="hint" style="margin-top:8px">
+      Tip: Mobile Safari often caps at ~60 fps for web capture. The app requests higher; the browser gives the best it can.
+    </div>
+
+    <video id="preview" playsinline muted></video>
+
+    <div class="row" style="justify-content:space-between; margin-top:12px;">
+      <div class="row" style="gap:8px;">
+        <button id="startRec" class="primary" disabled>Record</button>
+        <button id="stopRec" class="danger" disabled>Stop</button>
+      </div>
+      <div class="row" style="gap:8px;">
+        <span id="timer" class="pill">00:00</span>
+        <span id="status" class="pill">Idle</span>
+      </div>
+    </div>
+
+    <div id="errBox" class="warn" style="display:none; margin-top:10px;"></div>
+
+    <div style="margin-top:12px;">
+      <div class="hint">If camera is blocked, use this fallback to record with the native camera app and load the clip:</div>
+      <input id="filePicker" type="file" accept="video/*" capture="environment" />
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 style="margin-top:0;font-size:16px;">Playback</h2>
+    <video id="playback" controls playsinline></video>
+
+    <div class="row" style="margin-top:12px;">
+      <div class="row">
+        <button data-rate="1">1×</button>
+        <button data-rate="0.5">½×</button>
+        <button data-rate="0.2">⅕×</button>
+        <button data-rate="0.1">1/10×</button>
+      </div>
+      <div class="row">
+        <button id="stepBack">⟨ Frame</button>
+        <button id="stepFwd">Frame ⟩</button>
+      </div>
+      <div style="flex:1"></div>
+      <div class="row">
+        <button id="download" disabled>Download MP4</button>
+        <button id="resetClip" disabled>Clear</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const els = {
+  httpsWarn: document.getElementById('httpsWarn'),
+  cameraSelect: document.getElementById('cameraSelect'),
+  resolution: document.getElementById('resolution'),
+  fps: document.getElementById('fps'),
+  startPreview: document.getElementById('startPreview'),
+  stopPreview: document.getElementById('stopPreview'),
+  preview: document.getElementById('preview'),
+  startRec: document.getElementById('startRec'),
+  stopRec: document.getElementById('stopRec'),
+  status: document.getElementById('status'),
+  timer: document.getElementById('timer'),
+  playback: document.getElementById('playback'),
+  speedBtns: [...document.querySelectorAll('[data-rate]')],
+  stepBack: document.getElementById('stepBack'),
+  stepFwd: document.getElementById('stepFwd'),
+  download: document.getElementById('download'),
+  resetClip: document.getElementById('resetClip'),
+  errBox: document.getElementById('errBox'),
+  filePicker: document.getElementById('filePicker'),
+};
+
+let stream=null, mediaRecorder=null, chunks=[], currentBlob=null, timerInt=null, recStart=0;
+
+function showErr(msg){
+  els.errBox.style.display='block';
+  els.errBox.textContent = msg;
+}
+function clearErr(){
+  els.errBox.style.display='none';
+  els.errBox.textContent='';
+}
+function stopTracks(s){ if(!s) return; s.getTracks().forEach(t=>t.stop()); }
+
+function parseRes(v){ const [w,h]=v.split('x').map(Number); return {width:w,height:h}; }
+
+async function ensurePermissionAndListCams(){
+  // Request a tiny stream first (iOS won’t label devices until permission)
+  try{
+    const probe = await navigator.mediaDevices.getUserMedia({ video:true, audio:false });
+    stopTracks(probe);
+  }catch(e){
+    throw e; // propagate so we display it
+  }
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const cams = devices.filter(d=>d.kind==='videoinput');
+  els.cameraSelect.innerHTML='';
+  cams.forEach((cam,i)=>{
+    const opt=document.createElement('option');
+    opt.value = cam.deviceId;
+    opt.textContent = cam.label || `Camera ${i+1}`;
+    els.cameraSelect.appendChild(opt);
+  });
+  els.cameraSelect.disabled = false;
+}
+
+async function startPreview(){
+  clearErr();
+  try{
+    const {width,height} = parseRes(els.resolution.value);
+    const frameTarget = Number(els.fps.value);
+    if(stream) stopTracks(stream);
+
+    const constraints = {
+      audio:false,
+      video:{
+        deviceId: els.cameraSelect.value ? { exact: els.cameraSelect.value } : undefined,
+        facingMode: { ideal: 'environment' },
+        width: { ideal: width },
+        height: { ideal: height },
+        frameRate: { ideal: frameTarget, max: frameTarget }
+      }
+    };
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    els.preview.srcObject = stream;
+    await els.preview.play().catch(()=>{}); // iOS requires user gesture; already clicking
+    els.status.textContent='Previewing';
+    els.startRec.disabled=false;
+  }catch(e){
+    console.error(e);
+    showErr('Camera failed to start: ' + (e.message || e.name || e.toString()) +
+      '\nTips: Use HTTPS, open in Safari (not in-app), and allow Camera in Settings > Safari > Camera.');
+  }
+}
+
+function supportedMime(){
+  const candidates = [
+    'video/mp4;codecs="avc1.42E01E, mp4a.40.2"',
+    'video/mp4',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus'
+  ];
+  return candidates.find(t=>window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
+}
+
+function startTimer(){
+  recStart = Date.now();
+  els.timer.textContent='00:00';
+  timerInt = setInterval(()=>{
+    const s = Math.floor((Date.now()-recStart)/1000);
+    const mm=String(Math.floor(s/60)).padStart(2,'0');
+    const ss=String(s%60).padStart(2,'0');
+    els.timer.textContent=`${mm}:${ss}`;
+  },250);
+}
+function stopTimer(){ clearInterval(timerInt); timerInt=null; }
+
+function stopPreview(){
+  if(stream){ stopTracks(stream); stream=null; }
+  els.preview.srcObject=null;
+  els.startRec.disabled=true;
+  els.status.textContent='Idle';
+}
+
+function startRec(){
+  if(!stream){ showErr('No camera stream. Tap Start Camera first.'); return; }
+  clearErr();
+  const type = supportedMime();
+  if(!window.MediaRecorder){ showErr('MediaRecorder not supported on this browser/iOS version. Use file upload fallback.'); return; }
+  try{
+    chunks=[];
+    mediaRecorder = new MediaRecorder(stream, type ? { mimeType:type } : undefined);
+  }catch(e){
+    showErr('Recorder init failed: ' + (e.message||e));
+    return;
+  }
+  mediaRecorder.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+  mediaRecorder.onstop = ()=>{
+    const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'video/mp4' });
+    currentBlob = blob;
+    const url = URL.createObjectURL(blob);
+    els.playback.src = url;
+    els.playback.load();
+    els.download.disabled=false;
+    els.resetClip.disabled=false;
+    els.status.textContent='Recorded';
+  };
+  mediaRecorder.start();
+  els.status.textContent='Recording';
+  els.startRec.disabled=true;
+  els.stopRec.disabled=false;
+  startTimer();
+}
+
+function stopRec(){
+  if(mediaRecorder && mediaRecorder.state!=='inactive'){ mediaRecorder.stop(); }
+  els.stopRec.disabled=true;
+  stopTimer();
+  els.startRec.disabled=false;
+}
+
+function downloadClip(){
+  if(!currentBlob) return;
+  const a=document.createElement('a');
+  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+  const ext=(currentBlob.type||'').includes('webm')?'webm':'mp4';
+  a.href=URL.createObjectURL(currentBlob);
+  a.download=`swing-${stamp}.${ext}`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+function clearClip(){
+  els.playback.removeAttribute('src'); els.playback.load();
+  els.download.disabled=true; els.resetClip.disabled=true; currentBlob=null;
+}
+
+function stepFrame(dir=1){
+  const v=els.playback;
+  const fps = 60; // conservative fallback
+  const dt = 1/fps;
+  v.pause();
+  v.currentTime = Math.min(Math.max(0, v.currentTime + dir*dt), v.duration || 0);
+}
+
+// Events
+els.startPreview.addEventListener('click', startPreview);
+els.stopPreview.addEventListener('click', stopPreview);
+els.startRec.addEventListener('click', startRec);
+els.stopRec.addEventListener('click', stopRec);
+els.download.addEventListener('click', downloadClip);
+els.resetClip.addEventListener('click', clearClip);
+els.speedBtns.forEach(b=>b.addEventListener('click', ()=>{ els.playback.playbackRate=Number(b.dataset.rate); els.playback.play(); }));
+
+els.stepBack.addEventListener('click', ()=>stepFrame(-1));
+els.stepFwd.addEventListener('click', ()=>stepFrame(1));
+
+// Fallback: pick a video from native camera
+els.filePicker.addEventListener('change', ()=>{
+  const f = els.filePicker.files?.[0];
+  if(!f) return;
+  currentBlob = f;
+  const url = URL.createObjectURL(f);
+  els.playback.src = url;
+  els.playback.load();
+  els.download.disabled=false;
+  els.resetClip.disabled=false;
+  els.status.textContent='Loaded file';
+});
+
+// Init
+(function init(){
+  // HTTPS warning
+  const secure = location.protocol==='https:' || location.hostname==='localhost' || location.hostname.endsWith('.local');
+  if(!secure){ els.httpsWarn.style.display='block'; }
+
+  if(!('mediaDevices' in navigator)){
+    showErr('This browser does not support camera access.');
+    return;
+  }
+
+  // Only list cameras AFTER permission succeeds (more reliable on iOS)
+  els.startPreview.addEventListener('click', async ()=>{
+    // If we don’t yet have real labels, try to grant first time quickly:
+    if(els.cameraSelect.disabled){
+      try{
+        await ensurePermissionAndListCams();
+      }catch(e){
+        showErr('Permission required: ' + (e.message||e));
+        return;
+      }
+    }
+  }, { once:false });
+})();
+</script>
+</body>
+</html>
